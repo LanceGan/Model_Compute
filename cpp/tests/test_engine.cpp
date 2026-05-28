@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include "estimation_engine.h"
+#include "hardware_matcher.h"
 #include <cmath>
 
 using namespace model_compute;
@@ -90,4 +91,87 @@ TEST(DenseEstimation, LargeModel70B) {
     auto result = engine.estimate(params);
     EXPECT_NEAR(result.weight_memory_gb, 140.0, 2.0);
     EXPECT_GT(result.memory_gb, 140.0);
+}
+
+TEST(HardwareMatcher, SingleCardSufficient) {
+    HardwareMatcher matcher;
+    EstimationResult est;
+    est.memory_gb = 10.0;
+    est.flops_total = 1e18;
+    est.bandwidth_gbs = 50.0;
+
+    ModelParams mp;
+    mp.type = ModelType::DENSE;
+    mp.param_billions = 7.0;
+    mp.concurrency = 1;
+
+    HardwareSpec hw;
+    hw.name = "A100 80G";
+    hw.memory_gb = 80.0;
+    hw.fp16_tflops = 312.0;
+    hw.memory_bandwidth_gbs = 2039.0;
+    hw.nvlink_bandwidth_gbs = 600.0;
+    hw.cost_per_unit = 10000.0;
+
+    auto configs = matcher.match(est, mp, {hw}, 10.0);
+    ASSERT_FALSE(configs.empty());
+    EXPECT_EQ(configs[0].num_cards, 1);
+    EXPECT_TRUE(configs[0].meets_baseline);
+}
+
+TEST(HardwareMatcher, NeedsMultipleCardsForMemory) {
+    HardwareMatcher matcher;
+    EstimationResult est;
+    est.memory_gb = 150.0;
+    est.flops_total = 1e18;
+    est.bandwidth_gbs = 50.0;
+
+    ModelParams mp;
+    mp.type = ModelType::DENSE;
+    mp.param_billions = 70.0;
+    mp.concurrency = 1;
+
+    HardwareSpec hw;
+    hw.name = "A100 80G";
+    hw.memory_gb = 80.0;
+    hw.fp16_tflops = 312.0;
+    hw.memory_bandwidth_gbs = 2039.0;
+    hw.nvlink_bandwidth_gbs = 600.0;
+    hw.cost_per_unit = 10000.0;
+
+    auto configs = matcher.match(est, mp, {hw}, 10.0);
+    ASSERT_FALSE(configs.empty());
+    EXPECT_GE(configs[0].num_cards, 2);
+}
+
+TEST(HardwareMatcher, MultipleHardwareOptions) {
+    HardwareMatcher matcher;
+    EstimationResult est;
+    est.memory_gb = 30.0;
+    est.flops_total = 1e18;
+    est.bandwidth_gbs = 50.0;
+
+    ModelParams mp;
+    mp.type = ModelType::DENSE;
+    mp.param_billions = 13.0;
+    mp.concurrency = 1;
+
+    HardwareSpec a100;
+    a100.name = "A100 80G";
+    a100.memory_gb = 80.0;
+    a100.fp16_tflops = 312.0;
+    a100.memory_bandwidth_gbs = 2039.0;
+    a100.nvlink_bandwidth_gbs = 600.0;
+    a100.cost_per_unit = 10000.0;
+
+    HardwareSpec h100;
+    h100.name = "H100 80G";
+    h100.memory_gb = 80.0;
+    h100.fp16_tflops = 990.0;
+    h100.memory_bandwidth_gbs = 3350.0;
+    h100.nvlink_bandwidth_gbs = 900.0;
+    h100.cost_per_unit = 25000.0;
+
+    auto configs = matcher.match(est, mp, {a100, h100}, 10.0);
+    EXPECT_GE(configs.size(), 2u);
 }
