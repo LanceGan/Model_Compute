@@ -17,6 +17,7 @@ PYBIND11_MODULE(model_compute, m) {
         .value("MOE", ModelType::MOE)
         .value("O1_REASONING", ModelType::O1_REASONING)
         .value("MULTIMODAL", ModelType::MULTIMODAL)
+        .value("RECOMMENDATION", ModelType::RECOMMENDATION)
         .export_values();
 
     py::enum_<Quantization>(m, "Quantization")
@@ -38,7 +39,11 @@ PYBIND11_MODULE(model_compute, m) {
         .def_readwrite("active_experts", &ModelParams::active_experts)
         .def_readwrite("reasoning_depth", &ModelParams::reasoning_depth)
         .def_readwrite("image_resolution", &ModelParams::image_resolution)
-        .def_readwrite("num_images", &ModelParams::num_images);
+        .def_readwrite("num_images", &ModelParams::num_images)
+        .def_readwrite("num_sparse_features", &ModelParams::num_sparse_features)
+        .def_readwrite("vocab_size_per_feature", &ModelParams::vocab_size_per_feature)
+        .def_readwrite("embed_dim", &ModelParams::embed_dim)
+        .def_readwrite("mlp_dims", &ModelParams::mlp_dims);
 
     // ── EstimationResult ───────────────────────────────────────────────
 
