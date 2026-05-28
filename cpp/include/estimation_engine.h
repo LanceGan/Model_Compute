@@ -4,7 +4,7 @@
 
 namespace model_compute {
 
-enum class ModelType { DENSE, MOE, O1_REASONING, MULTIMODAL };
+enum class ModelType { DENSE, MOE, O1_REASONING, MULTIMODAL, RECOMMENDATION };
 enum class Quantization { FP16, INT8, INT4 };
 
 struct ModelParams {
@@ -18,6 +18,12 @@ struct ModelParams {
     int reasoning_depth = 0;
     int image_resolution = 0;
     int num_images = 1;
+
+    // Recommendation model fields
+    int num_sparse_features = 0;
+    int vocab_size_per_feature = 0;
+    int embed_dim = 0;
+    std::vector<int> mlp_dims;
 };
 
 struct EstimationResult {
@@ -38,6 +44,7 @@ private:
     double estimate_moe(const ModelParams& p, EstimationResult& r);
     double estimate_o1(const ModelParams& p, EstimationResult& r);
     double estimate_multimodal(const ModelParams& p, EstimationResult& r);
+    double estimate_recommendation(const ModelParams& p, EstimationResult& r);
 };
 
 } // namespace model_compute

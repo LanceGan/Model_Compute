@@ -38,6 +38,9 @@ EstimationResult EstimationEngine::estimate(const ModelParams& params) {
         case ModelType::MULTIMODAL:
             estimate_multimodal(params, result);
             break;
+        case ModelType::RECOMMENDATION:
+            estimate_recommendation(params, result);
+            break;
     }
     return result;
 }
@@ -148,6 +151,61 @@ double EstimationEngine::estimate_multimodal(const ModelParams& p, EstimationRes
     r.kv_cache_gb += img_kv_gb;
     r.memory_gb += vit_memory + img_kv_gb;
     r.flops_total += vit_flops;
+
+    return r.memory_gb;
+}
+
+double EstimationEngine::estimate_recommendation(const ModelParams& p, EstimationResult& r) {
+    double bpp = bytes_per_param(p.quant);
+
+    if (!p.mlp_dims.empty() && p.num_sparse_features > 0) {
+        // DLRM/DeepFM: Embedding-dominant model
+        double embedding_bytes = static_cast<double>(p.num_sparse_features)
+                                 * p.vocab_size_per_feature * p.embed_dim * bpp;
+        r.weight_memory_gb = embedding_bytes / 1e9;
+
+        // MLP parameters: each feature has its own MLP
+        double mlp_params = 0;
+        int prev_dim = p.embed_dim;
+        for (int dim : p.mlp_dims) {
+            mlp_params += static_cast<double>(prev_dim) * dim + dim;
+            prev_dim = dim;
+        }
+        double mlp_bytes = mlp_params * p.num_sparse_features * bpp;
+        r.weight_memory_gb += mlp_bytes / 1e9;
+
+        r.kv_cache_gb = 0;
+
+        double total_bytes = embedding_bytes + mlp_bytes;
+        r.memory_gb = total_bytes * 1.10 / 1e9;
+
+        // FLOPs: MLP forward pass per feature
+        double mlp_flops_per_feature = 0;
+        prev_dim = p.embed_dim;
+        for (int dim : p.mlp_dims) {
+            mlp_flops_per_feature += 2.0 * prev_dim * dim;
+            prev_dim = dim;
+        }
+        r.flops_total = mlp_flops_per_feature * p.num_sparse_features * p.concurrency;
+
+        // Bandwidth: embedding lookups are random access
+        double lookup_bytes = p.num_sparse_features * p.embed_dim * bpp;
+        r.bandwidth_gbs = lookup_bytes * 10.0 / 1e9;
+
+    } else if (p.num_sparse_features > 0) {
+        // Sequential recommendation: Dense backbone + item embedding
+        if (p.param_billions > 0) {
+            ModelParams dense_params = p;
+            dense_params.type = ModelType::DENSE;
+            estimate_dense(dense_params, r);
+        }
+
+        double embedding_bytes = static_cast<double>(p.vocab_size_per_feature)
+                                 * p.embed_dim * bpp;
+        double embedding_gb = embedding_bytes / 1e9;
+        r.weight_memory_gb += embedding_gb;
+        r.memory_gb += embedding_gb;
+    }
 
     return r.memory_gb;
 }

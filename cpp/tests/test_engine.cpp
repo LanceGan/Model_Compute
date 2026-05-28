@@ -272,3 +272,92 @@ TEST(Calibration, SaveAndLoad) {
 
     std::remove(path.c_str());
 }
+
+TEST(RecommendationEstimation, DLRMEmbeddingMemoryDominates) {
+    EstimationEngine engine;
+    ModelParams params;
+    params.type = ModelType::RECOMMENDATION;
+    params.param_billions = 0;
+    params.quant = Quantization::FP16;
+    params.concurrency = 1;
+    params.max_tokens = 2048;
+    params.num_sparse_features = 26;
+    params.vocab_size_per_feature = 100000;
+    params.embed_dim = 128;
+    params.mlp_dims = {512, 256, 1};
+
+    auto result = engine.estimate(params);
+    EXPECT_GT(result.weight_memory_gb, 0.5);
+    EXPECT_LT(result.weight_memory_gb, 2.0);
+    EXPECT_GT(result.memory_gb, 0.5);
+}
+
+TEST(RecommendationEstimation, DLRMLargerVocabMoreMemory) {
+    EstimationEngine engine;
+    ModelParams p1;
+    p1.type = ModelType::RECOMMENDATION;
+    p1.quant = Quantization::FP16;
+    p1.concurrency = 1;
+    p1.max_tokens = 2048;
+    p1.num_sparse_features = 26;
+    p1.vocab_size_per_feature = 100000;
+    p1.embed_dim = 128;
+    p1.mlp_dims = {512, 256, 1};
+
+    ModelParams p2 = p1;
+    p2.vocab_size_per_feature = 1000000;
+
+    auto r1 = engine.estimate(p1);
+    auto r2 = engine.estimate(p2);
+    EXPECT_GT(r2.memory_gb, r1.memory_gb * 5);
+}
+
+TEST(RecommendationEstimation, DLRMINT8ReducesMemory) {
+    EstimationEngine engine;
+    ModelParams params;
+    params.type = ModelType::RECOMMENDATION;
+    params.quant = Quantization::INT8;
+    params.concurrency = 1;
+    params.max_tokens = 2048;
+    params.num_sparse_features = 26;
+    params.vocab_size_per_feature = 100000;
+    params.embed_dim = 128;
+    params.mlp_dims = {512, 256, 1};
+
+    auto result = engine.estimate(params);
+    EXPECT_GT(result.weight_memory_gb, 0.2);
+    EXPECT_LT(result.weight_memory_gb, 1.0);
+}
+
+TEST(RecommendationEstimation, DLRMFLOPsPositive) {
+    EstimationEngine engine;
+    ModelParams params;
+    params.type = ModelType::RECOMMENDATION;
+    params.quant = Quantization::FP16;
+    params.concurrency = 1;
+    params.max_tokens = 2048;
+    params.num_sparse_features = 26;
+    params.vocab_size_per_feature = 100000;
+    params.embed_dim = 128;
+    params.mlp_dims = {512, 256, 1};
+
+    auto result = engine.estimate(params);
+    EXPECT_GT(result.flops_total, 0);
+}
+
+TEST(RecommendationEstimation, SequentialRecAddsEmbeddingToDense) {
+    EstimationEngine engine;
+    ModelParams params;
+    params.type = ModelType::RECOMMENDATION;
+    params.param_billions = 0.5;
+    params.quant = Quantization::FP16;
+    params.concurrency = 1;
+    params.max_tokens = 2048;
+    params.num_sparse_features = 1;
+    params.vocab_size_per_feature = 50000;
+    params.embed_dim = 64;
+
+    auto result = engine.estimate(params);
+    EXPECT_GT(result.memory_gb, 0);
+    EXPECT_GT(result.weight_memory_gb, 0);
+}
