@@ -36,12 +36,13 @@ def render():
 
         model_type = st.selectbox(
             "负载类型",
-            ["dense", "moe", "o1_reasoning", "multimodal"],
+            ["dense", "moe", "o1_reasoning", "multimodal", "recommendation"],
             format_func=lambda x: {
                 "dense": "稠密模型 (Dense)",
                 "moe": "MoE 模型",
                 "o1_reasoning": "类o1推理模型",
                 "multimodal": "多模态模型",
+                "recommendation": "生成式推荐模型",
             }[x],
         )
 
@@ -51,7 +52,10 @@ def render():
         preset_name = st.selectbox("模型预设", ["自定义"] + preset_names)
 
         if preset_name == "自定义":
-            param_billions = st.number_input("参数量 (B)", min_value=0.1, value=7.0, step=0.1)
+            if model_type == "recommendation":
+                param_billions = st.number_input("骨干参数量 (B)（序列推荐用，DLRM填0）", min_value=0.0, value=0.0, step=0.1)
+            else:
+                param_billions = st.number_input("参数量 (B)", min_value=0.1, value=7.0, step=0.1)
         else:
             param_billions = None
 
@@ -74,6 +78,19 @@ def render():
             image_resolution = st.selectbox("图像分辨率", [224, 336, 448], index=1)
             num_images = st.slider("图像数量", 1, 10, 1)
 
+        num_sparse_features = 0
+        vocab_size_per_feature = 0
+        embed_dim = 0
+        mlp_dims = []
+
+        if model_type == "recommendation":
+            num_sparse_features = st.number_input("稀疏特征数", min_value=1, value=26, key="est_sparse")
+            vocab_size_per_feature = st.number_input("每特征词表大小", min_value=1000, value=100000, step=10000, key="est_vocab")
+            embed_dim = st.number_input("Embedding 维度", min_value=8, value=128, step=8, key="est_embed")
+            mlp_str = st.text_input("MLP 层维度（逗号分隔，留空表示序列推荐）", "512,256,1", key="est_mlp")
+            if mlp_str.strip():
+                mlp_dims = [int(x.strip()) for x in mlp_str.split(",") if x.strip()]
+
         run_button = st.button("开始估算", type="primary", use_container_width=True)
 
     if run_button:
@@ -91,6 +108,10 @@ def render():
                 reasoning_depth=reasoning_depth,
                 image_resolution=image_resolution,
                 num_images=num_images,
+                num_sparse_features=num_sparse_features,
+                vocab_size_per_feature=vocab_size_per_feature,
+                embed_dim=embed_dim,
+                mlp_dims=mlp_dims,
             )
 
             # Run estimation

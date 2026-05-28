@@ -32,12 +32,15 @@ def render():
 
     col1, col2 = st.columns(2)
     with col1:
-        model_type = st.selectbox("负载类型", ["dense", "moe", "o1_reasoning", "multimodal"],
-                                  format_func=lambda x: {"dense": "稠密", "moe": "MoE", "o1_reasoning": "类o1", "multimodal": "多模态"}[x], key="sa_type")
+        model_type = st.selectbox("负载类型", ["dense", "moe", "o1_reasoning", "multimodal", "recommendation"],
+                                  format_func=lambda x: {"dense": "稠密", "moe": "MoE", "o1_reasoning": "类o1", "multimodal": "多模态", "recommendation": "生成式推荐模型"}[x], key="sa_type")
         presets = analyzer.list_presets()
         preset_name = st.selectbox("模型预设", ["自定义"] + presets.get(model_type, []), key="sa_preset")
         if preset_name == "自定义":
-            param_billions = st.number_input("参数量 (B)", 0.1, value=7.0, key="sa_params")
+            if model_type == "recommendation":
+                param_billions = st.number_input("骨干参数量 (B)（序列推荐用，DLRM填0）", min_value=0.0, value=0.0, step=0.1, key="sa_params")
+            else:
+                param_billions = st.number_input("参数量 (B)", 0.1, value=7.0, key="sa_params")
         else:
             param_billions = None
         quant = st.selectbox("量化方案", ["FP16", "INT8", "INT4"], key="sa_quant")
@@ -60,6 +63,19 @@ def render():
     if model_type == "multimodal":
         image_resolution = st.selectbox("图像分辨率", [224, 336, 448], index=1, key="sa_res")
         num_images = st.slider("图像数量", 1, 10, 1, key="sa_imgs")
+
+    num_sparse_features = 0
+    vocab_size_per_feature = 0
+    embed_dim = 0
+    mlp_dims = []
+
+    if model_type == "recommendation":
+        num_sparse_features = st.number_input("稀疏特征数", min_value=1, value=26, key="sa_sparse")
+        vocab_size_per_feature = st.number_input("每特征词表大小", min_value=1000, value=100000, step=10000, key="sa_vocab")
+        embed_dim = st.number_input("Embedding 维度", min_value=8, value=128, step=8, key="sa_embed")
+        mlp_str = st.text_input("MLP 层维度（逗号分隔，留空表示序列推荐）", "512,256,1", key="sa_mlp")
+        if mlp_str.strip():
+            mlp_dims = [int(x.strip()) for x in mlp_str.split(",") if x.strip()]
 
     analysis_var = st.selectbox("分析变量", ["并发量", "参数量", "序列长度"], key="sa_var")
 
@@ -94,6 +110,10 @@ def render():
                     reasoning_depth=reasoning_depth,
                     image_resolution=image_resolution,
                     num_images=num_images,
+                    num_sparse_features=num_sparse_features,
+                    vocab_size_per_feature=vocab_size_per_feature,
+                    embed_dim=embed_dim,
+                    mlp_dims=mlp_dims,
                 )
                 result = engine.estimate(params)
                 configs = matcher.match(result, params, target_hw, 10.0)
@@ -114,6 +134,10 @@ def render():
                     reasoning_depth=reasoning_depth,
                     image_resolution=image_resolution,
                     num_images=num_images,
+                    num_sparse_features=num_sparse_features,
+                    vocab_size_per_feature=vocab_size_per_feature,
+                    embed_dim=embed_dim,
+                    mlp_dims=mlp_dims,
                 )
                 result = engine.estimate(params)
                 configs = matcher.match(result, params, target_hw, 10.0)
@@ -136,6 +160,10 @@ def render():
                     reasoning_depth=reasoning_depth,
                     image_resolution=image_resolution,
                     num_images=num_images,
+                    num_sparse_features=num_sparse_features,
+                    vocab_size_per_feature=vocab_size_per_feature,
+                    embed_dim=embed_dim,
+                    mlp_dims=mlp_dims,
                 )
                 result = engine.estimate(params)
                 configs = matcher.match(result, params, target_hw, 10.0)
