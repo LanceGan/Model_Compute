@@ -21,13 +21,38 @@ std::string HardwareMatcher::select_parallel_strategy(int cards, ModelType type)
 
 double HardwareMatcher::estimate_comm_overhead(int cards, const HardwareSpec& hw, const ModelParams& mp) {
     if (cards <= 1) return 0.0;
-    double tp_overhead = 0.0;
+
+    // Estimate hidden_dim from model params (approximate)
+    double p = mp.param_billions * 1e9;
+    double L = std::pow(p / (12.0 * 128.0 * 128.0), 1.0 / 3.0);
+    int num_layers = std::max(2, static_cast<int>(std::round(L)));
+    int hidden_dim = std::max(512, static_cast<int>(std::round(128.0 * num_layers)));
+    hidden_dim = (hidden_dim + 63) / 64 * 64;
+
+    double bpp = 2.0;  // Default FP16
+    if (mp.quant == Quantization::INT8) bpp = 1.0;
+    else if (mp.quant == Quantization::INT4) bpp = 0.5;
+
+    // AllReduce communication: 2 * hidden * bpp * (N-1)/N per layer
+    double comm_bytes_per_layer = 2.0 * hidden_dim * bpp * (cards - 1.0) / cards;
+    double total_comm_bytes = comm_bytes_per_layer * num_layers;
+
+    // Select interconnect bandwidth
+    double bandwidth_gbs = 0;
     if (hw.nvlink_bandwidth_gbs > 0) {
-        tp_overhead = 0.05 * (cards - 1) / cards;
+        bandwidth_gbs = hw.nvlink_bandwidth_gbs;
+    } else if (hw.vendor == "华为" || hw.vendor == "Huawei") {
+        bandwidth_gbs = 200.0;  // HCCS typical
     } else {
-        tp_overhead = 0.10 * (cards - 1) / cards;
+        bandwidth_gbs = 64.0;   // PCIe 4.0 x16
     }
-    return std::min(tp_overhead, 0.30);
+
+    // Communication time vs compute time ratio
+    double comm_time = total_comm_bytes / (bandwidth_gbs * 1e9);
+    double compute_time = 2.0 * mp.param_billions * 1e9 / (hw.fp16_tflops * 1e12);
+    if (compute_time <= 0) return 0.0;
+    double overhead = comm_time / (comm_time + compute_time);
+    return std::min(overhead, 0.50);  // Cap at 50%
 }
 
 std::vector<HardwareConfig> HardwareMatcher::match(

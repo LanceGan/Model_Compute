@@ -417,3 +417,63 @@ TEST(ArchitectureInference, TinyModelDims) {
     EXPECT_GT(result.weight_memory_gb, 0);
     EXPECT_GT(result.memory_gb, result.weight_memory_gb);
 }
+
+TEST(HardwareMatcher, NVLinkLowerOverheadThanPCIe) {
+    HardwareMatcher matcher;
+    EstimationResult est;
+    est.memory_gb = 200.0;
+    est.flops_total = 1e18;
+    est.bandwidth_gbs = 100.0;
+
+    ModelParams mp;
+    mp.type = ModelType::DENSE;
+    mp.param_billions = 70.0;
+    mp.concurrency = 1;
+
+    HardwareSpec nvlink_hw;
+    nvlink_hw.name = "A100 NVLink";
+    nvlink_hw.vendor = "NVIDIA";
+    nvlink_hw.memory_gb = 80.0;
+    nvlink_hw.fp16_tflops = 312.0;
+    nvlink_hw.memory_bandwidth_gbs = 2039.0;
+    nvlink_hw.nvlink_bandwidth_gbs = 600.0;
+
+    HardwareSpec pcie_hw;
+    pcie_hw.name = "L40S PCIe";
+    pcie_hw.vendor = "NVIDIA";
+    pcie_hw.memory_gb = 48.0;
+    pcie_hw.fp16_tflops = 362.0;
+    pcie_hw.memory_bandwidth_gbs = 864.0;
+    pcie_hw.nvlink_bandwidth_gbs = 0;
+
+    auto nv_configs = matcher.match(est, mp, {nvlink_hw}, 10.0);
+    auto pcie_configs = matcher.match(est, mp, {pcie_hw}, 10.0);
+
+    ASSERT_FALSE(nv_configs.empty());
+    ASSERT_FALSE(pcie_configs.empty());
+}
+
+TEST(HardwareMatcher, HuaweiHCCSOverhead) {
+    HardwareMatcher matcher;
+    EstimationResult est;
+    est.memory_gb = 50.0;
+    est.flops_total = 1e18;
+    est.bandwidth_gbs = 100.0;
+
+    ModelParams mp;
+    mp.type = ModelType::DENSE;
+    mp.param_billions = 7.0;
+    mp.concurrency = 1;
+
+    HardwareSpec hw;
+    hw.name = "910B";
+    hw.vendor = "华为";
+    hw.memory_gb = 64.0;
+    hw.fp16_tflops = 320.0;
+    hw.memory_bandwidth_gbs = 1200.0;
+    hw.nvlink_bandwidth_gbs = 0;
+
+    auto configs = matcher.match(est, mp, {hw}, 10.0);
+    ASSERT_FALSE(configs.empty());
+    EXPECT_TRUE(configs[0].meets_baseline);
+}
