@@ -27,6 +27,13 @@ target_include_directories(model_compute_core PUBLIC include)
 pybind11_add_module(model_compute bindings/pybind_module.cpp)
 target_link_libraries(model_compute PRIVATE model_compute_core)
 
+# Workaround: MinGW's GNU ld (binutils) crashes with exit code 116 when
+# processing pybind11 object files containing many COMDAT sections via
+# --whole-archive.  Use LLVM's lld linker instead, which handles this correctly.
+if(MINGW)
+  target_link_options(model_compute PRIVATE "-fuse-ld=lld")
+endif()
+
 # Tests
 add_executable(test_engine tests/test_engine.cpp)
 target_link_libraries(test_engine PRIVATE model_compute_core GTest::gtest_main)
