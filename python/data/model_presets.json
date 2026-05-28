@@ -21,6 +21,39 @@
       {"name": "LLaVA-1.5 7B", "param_billions": 7.0, "vit_params_billions": 0.304, "image_resolution": 336, "num_layers": 32, "hidden_dim": 4096},
       {"name": "LLaVA-1.5 13B", "param_billions": 13.0, "vit_params_billions": 0.304, "image_resolution": 336, "num_layers": 40, "hidden_dim": 5120},
       {"name": "Qwen-VL-Chat", "param_billions": 9.6, "vit_params_billions": 0.675, "image_resolution": 448, "num_layers": 32, "hidden_dim": 4096}
+    ],
+    "recommendation": [
+      {
+        "name": "DLRM-small",
+        "num_sparse_features": 26,
+        "vocab_size_per_feature": 100000,
+        "embed_dim": 128,
+        "mlp_dims": [512, 256, 1],
+        "notes": "Facebook DLRM基准配置"
+      },
+      {
+        "name": "DLRM-large",
+        "num_sparse_features": 26,
+        "vocab_size_per_feature": 1000000,
+        "embed_dim": 128,
+        "mlp_dims": [1024, 512, 256, 1],
+        "notes": "大规模推荐模型"
+      },
+      {
+        "name": "DeepFM",
+        "num_sparse_features": 39,
+        "vocab_size_per_feature": 500000,
+        "embed_dim": 64,
+        "mlp_dims": [1024, 512, 1],
+        "notes": "DeepFM基准配置"
+      },
+      {
+        "name": "SASRec",
+        "num_sparse_features": 1,
+        "vocab_size_per_feature": 50000,
+        "embed_dim": 64,
+        "notes": "序列推荐Transformer"
+      }
     ]
   }
 }

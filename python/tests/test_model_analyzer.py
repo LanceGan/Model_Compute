@@ -82,3 +82,37 @@ def test_create_multimodal_params():
         num_images=1
     )
     assert params.image_resolution == 336
+
+
+def test_create_dlrm_params():
+    analyzer = ModelAnalyzer()
+    params = analyzer.create_params(
+        model_type="recommendation",
+        preset_name="DLRM-small",
+        quant="FP16",
+        concurrency=1,
+        max_tokens=2048,
+    )
+    assert params.num_sparse_features == 26
+    assert params.vocab_size_per_feature == 100000
+    assert params.embed_dim == 128
+    assert len(params.mlp_dims) == 3
+
+def test_create_sasrec_params():
+    analyzer = ModelAnalyzer()
+    params = analyzer.create_params(
+        model_type="recommendation",
+        preset_name="SASRec",
+        quant="FP16",
+        concurrency=1,
+        max_tokens=2048,
+    )
+    assert params.num_sparse_features == 1
+    assert params.embed_dim == 64
+    assert len(params.mlp_dims) == 0
+
+def test_recommendation_presets_listed():
+    analyzer = ModelAnalyzer()
+    presets = analyzer.list_presets()
+    assert "recommendation" in presets
+    assert len(presets["recommendation"]) >= 4

@@ -38,6 +38,7 @@ _TYPE_MAP = {
     "moe": _mc.ModelType.MOE if _mc else None,
     "o1_reasoning": _mc.ModelType.O1_REASONING if _mc else None,
     "multimodal": _mc.ModelType.MULTIMODAL if _mc else None,
+    "recommendation": _mc.ModelType.RECOMMENDATION if _mc else None,
 }
 
 
@@ -74,7 +75,13 @@ class ModelAnalyzer:
         reasoning_depth: Optional[int] = None,
         image_resolution: Optional[int] = None,
         num_images: int = 1,
+        num_sparse_features: int = 0,
+        vocab_size_per_feature: int = 0,
+        embed_dim: int = 0,
+        mlp_dims: Optional[list] = None,
     ):
+        if mlp_dims is None:
+            mlp_dims = []
         if _mc is None:
             raise RuntimeError("C++ module not available. Build with: bash scripts/build.sh")
 
@@ -97,12 +104,20 @@ class ModelAnalyzer:
             params.active_experts = preset.get("active_experts", 0)
             params.reasoning_depth = preset.get("reasoning_depth", 0)
             params.image_resolution = preset.get("image_resolution", 0)
+            params.num_sparse_features = preset.get("num_sparse_features", 0)
+            params.vocab_size_per_feature = preset.get("vocab_size_per_feature", 0)
+            params.embed_dim = preset.get("embed_dim", 0)
+            params.mlp_dims = preset.get("mlp_dims", [])
         elif param_billions is not None:
             params.param_billions = param_billions
             params.num_experts = num_experts
             params.active_experts = active_experts
             params.reasoning_depth = reasoning_depth if reasoning_depth is not None else 0
             params.image_resolution = image_resolution if image_resolution is not None else 0
+            params.num_sparse_features = num_sparse_features
+            params.vocab_size_per_feature = vocab_size_per_feature
+            params.embed_dim = embed_dim
+            params.mlp_dims = mlp_dims
 
         # Override if explicitly provided (including 0, which disables the feature)
         if reasoning_depth is not None:
