@@ -374,3 +374,46 @@ TEST(RecommendationEstimation, SequentialRecAddsEmbeddingToDense) {
     // Sequential rec should have MORE memory than pure dense (embedding added)
     EXPECT_GT(result.weight_memory_gb, dense_result.weight_memory_gb);
 }
+
+TEST(ArchitectureInference, SmallModelReasonableDims) {
+    EstimationEngine engine;
+    ModelParams params;
+    params.type = ModelType::DENSE;
+    params.param_billions = 7.0;
+    params.quant = Quantization::FP16;
+    params.concurrency = 1;
+    params.max_tokens = 2048;
+
+    auto result = engine.estimate(params);
+    EXPECT_NEAR(result.weight_memory_gb, 14.0, 1.0);
+    EXPECT_GT(result.kv_cache_gb, 0);
+    EXPECT_LT(result.kv_cache_gb, 100.0);
+}
+
+TEST(ArchitectureInference, LargeModelReasonableDims) {
+    EstimationEngine engine;
+    ModelParams params;
+    params.type = ModelType::DENSE;
+    params.param_billions = 70.0;
+    params.quant = Quantization::FP16;
+    params.concurrency = 1;
+    params.max_tokens = 4096;
+
+    auto result = engine.estimate(params);
+    EXPECT_NEAR(result.weight_memory_gb, 140.0, 5.0);
+    EXPECT_GT(result.memory_gb, result.weight_memory_gb);
+}
+
+TEST(ArchitectureInference, TinyModelDims) {
+    EstimationEngine engine;
+    ModelParams params;
+    params.type = ModelType::DENSE;
+    params.param_billions = 0.5;
+    params.quant = Quantization::FP16;
+    params.concurrency = 1;
+    params.max_tokens = 1024;
+
+    auto result = engine.estimate(params);
+    EXPECT_GT(result.weight_memory_gb, 0);
+    EXPECT_GT(result.memory_gb, result.weight_memory_gb);
+}

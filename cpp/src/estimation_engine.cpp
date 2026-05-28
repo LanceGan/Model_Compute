@@ -14,13 +14,19 @@ double EstimationEngine::bytes_per_param(Quantization q) {
 }
 
 static void infer_architecture(double param_b, int& num_layers, int& hidden_dim) {
-    if (param_b <= 1.5)      { num_layers = 22;  hidden_dim = 2048; }
-    else if (param_b <= 3.5) { num_layers = 26;  hidden_dim = 3200; }
-    else if (param_b <= 8.0) { num_layers = 32;  hidden_dim = 4096; }
-    else if (param_b <= 15.0){ num_layers = 40;  hidden_dim = 5120; }
-    else if (param_b <= 35.0){ num_layers = 60;  hidden_dim = 6656; }
-    else if (param_b <= 75.0){ num_layers = 80;  hidden_dim = 8192; }
-    else                     { num_layers = 96;  hidden_dim = 12288; }
+    // Parameterized formula: P ≈ 12 * L * d² (Transformer params ignoring embedding)
+    // With typical ratio d/L ≈ 128 for LLaMA-family models
+    double p = param_b * 1e9;
+    if (p <= 0) {
+        num_layers = 2;
+        hidden_dim = 512;
+        return;
+    }
+    double L = std::pow(p / (12.0 * 128.0 * 128.0), 1.0 / 3.0);
+    num_layers = std::max(2, static_cast<int>(std::round(L)));
+    hidden_dim = std::max(512, static_cast<int>(std::round(128.0 * num_layers)));
+    // Align to 64 (hardware-friendly alignment)
+    hidden_dim = (hidden_dim + 63) / 64 * 64;
 }
 
 EstimationResult EstimationEngine::estimate(const ModelParams& params) {
@@ -56,8 +62,12 @@ double EstimationEngine::estimate_dense(const ModelParams& p, EstimationResult& 
     double kv_bytes = 2.0 * num_layers * hidden_dim * p.max_tokens * p.concurrency * bpp;
     r.kv_cache_gb = kv_bytes / 1e9;
 
-    double activation_ratio = 0.02 * std::min(static_cast<double>(p.concurrency), 32.0);
-    double activation_bytes = p.param_billions * 1e9 * activation_ratio * bpp;
+    // Activation memory: based on architecture dimensions
+    // Inference factor ≈ 2 (no backward pass intermediates)
+    int num_l2, h_dim2;
+    infer_architecture(p.param_billions, num_l2, h_dim2);
+    double activation_factor = 2.0;
+    double activation_bytes = p.concurrency * p.max_tokens * h_dim2 * num_l2 * bpp * activation_factor;
 
     double total_bytes = params_bytes + kv_bytes + activation_bytes;
     r.memory_gb = total_bytes * 1.10 / 1e9;
