@@ -36,21 +36,25 @@ void Calibration::load_from_file(const std::string& path) {
     std::string line;
     while (std::getline(file, line)) {
         if (line.empty() || line[0] == '#') continue;
-        CalibrationPoint pt;
-        size_t pos = 0;
-        auto next = [&]() -> std::string {
-            size_t end = line.find(',', pos);
-            std::string val = line.substr(pos, end - pos);
-            pos = (end == std::string::npos) ? end : end + 1;
-            return val;
-        };
-        pt.model_type = next();
-        pt.hardware_name = next();
-        pt.predicted_throughput = std::stod(next());
-        pt.actual_throughput = std::stod(next());
-        pt.predicted_memory = std::stod(next());
-        pt.actual_memory = std::stod(next());
-        add_point(pt);
+        try {
+            CalibrationPoint pt;
+            size_t pos = 0;
+            auto next = [&]() -> std::string {
+                size_t end = line.find(',', pos);
+                std::string val = line.substr(pos, end - pos);
+                pos = (end == std::string::npos) ? end : end + 1;
+                return val;
+            };
+            pt.model_type = next();
+            pt.hardware_name = next();
+            pt.predicted_throughput = std::stod(next());
+            pt.actual_throughput = std::stod(next());
+            pt.predicted_memory = std::stod(next());
+            pt.actual_memory = std::stod(next());
+            add_point(pt);
+        } catch (const std::exception&) {
+            continue;
+        }
     }
 }
 
@@ -79,7 +83,8 @@ void Calibration::recompute_factor(const std::string& model_type, const std::str
     int count = 0;
 
     for (const auto& p : it->second) {
-        if (p.predicted_throughput > 0 && p.actual_throughput > 0) {
+        if (p.predicted_throughput > 0 && p.actual_throughput > 0 &&
+            p.predicted_memory > 0 && p.actual_memory > 0) {
             throughput_sum += p.actual_throughput / p.predicted_throughput;
             memory_sum += p.actual_memory / p.predicted_memory;
             count++;

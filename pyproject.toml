@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "model-compute"
+version = "1.0.0"
+description = "模型对算力等效建模评估工具"
+requires-python = ">=3.10"
+dependencies = [
+    "streamlit>=1.30.0",
+    "plotly>=5.18.0",
+    "pandas>=2.0.0",
+    "numpy>=1.24.0",
+]
+
+[tool.setuptools.packages.find]
+include = ["python*"]

@@ -43,8 +43,8 @@ std::vector<HardwareConfig> HardwareMatcher::match(
         config.hardware = hw;
 
         int cards_mem = calculate_cards_by_memory(estimation.memory_gb, hw.memory_gb);
-        int cards_compute = 1;
-        config.num_cards = std::max(cards_mem, cards_compute);
+        int cards_compute = calculate_cards_by_compute(estimation.flops_total, hw.fp16_tflops);
+        config.num_cards = std::max({cards_mem, cards_compute, 1});
 
         config.parallel_strategy = select_parallel_strategy(config.num_cards, model_params.type);
 
@@ -63,7 +63,11 @@ std::vector<HardwareConfig> HardwareMatcher::match(
             config.estimated_throughput = 100.0;
         }
 
-        double compute_throughput = hw.fp16_tflops * 1e12 / (2.0 * model_params.param_billions * 1e9);
+        double compute_tflops = (model_params.quant == Quantization::INT8 || model_params.quant == Quantization::INT4)
+                                ? hw.int8_tops : hw.fp16_tflops;
+        double compute_throughput = (model_params.param_billions > 0)
+            ? compute_tflops * 1e12 / (2.0 * model_params.param_billions * 1e9)
+            : 1e18;
         config.bottleneck_type = (config.estimated_throughput < compute_throughput) ? "memory" : "compute";
         config.estimated_throughput = std::min(config.estimated_throughput, compute_throughput);
 

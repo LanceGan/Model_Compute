@@ -1,6 +1,7 @@
 import streamlit as st
 from python.core.model_analyzer import ModelAnalyzer
 from python.core.hardware_db import HardwareDB
+from python.core.calibration_mgr import CalibrationManager
 from python.web.components.charts import render_throughput_bar
 
 import sys
@@ -23,6 +24,8 @@ def render():
 
     analyzer = ModelAnalyzer()
     hw_db = HardwareDB()
+    cal_mgr = CalibrationManager()
+    cal_mgr.load()
 
     st.header("多硬件对比")
     st.markdown("输入模型参数，同时对比所有可用硬件的性能表现。")
@@ -42,12 +45,31 @@ def render():
         concurrency = st.slider("并发量", 1, 500, 1, key="cmp_conc")
         max_tokens = st.slider("最大 tokens", 512, 32768, 2048, step=512, key="cmp_tokens")
 
+    # Conditional params
+    reasoning_depth = 0
+    image_resolution = 0
+    num_images = 1
+
+    if model_type == "o1_reasoning":
+        reasoning_depth = st.selectbox(
+            "推理深度", [1, 2, 3],
+            format_func=lambda x: {1: "轻度 (2-3x)", 2: "中度 (3-5x)", 3: "重度 (5-10x)"}[x],
+            key="cmp_depth",
+        )
+
+    if model_type == "multimodal":
+        image_resolution = st.selectbox("图像分辨率", [224, 336, 448], index=1, key="cmp_res")
+        num_images = st.slider("图像数量", 1, 10, 1, key="cmp_imgs")
+
     if st.button("开始对比", type="primary", use_container_width=True):
         params = analyzer.create_params(
             model_type=model_type,
             preset_name=preset_name if preset_name != "自定义" else None,
             param_billions=param_billions,
             quant=quant, concurrency=concurrency, max_tokens=max_tokens,
+            reasoning_depth=reasoning_depth,
+            image_resolution=image_resolution,
+            num_images=num_images,
         )
 
         engine = mc.EstimationEngine()
@@ -63,12 +85,14 @@ def render():
         # Results table
         rows = []
         for c in configs:
+            factor = cal_mgr.get_factor(model_type, c.hardware.name)
+            adj_tp = c.estimated_throughput * factor.throughput_factor
             rows.append({
                 "硬件": c.hardware.name,
                 "厂商": c.hardware.vendor,
                 "卡数": c.num_cards,
                 "单卡显存 (GB)": c.hardware.memory_gb,
-                "预估吞吐 (tokens/s)": round(c.estimated_throughput, 1),
+                "预估吞吐 (tokens/s)": round(adj_tp, 1),
                 "预估延迟 (ms)": round(c.estimated_latency_ms, 1),
                 "瓶颈": c.bottleneck_type,
                 "并行策略": c.parallel_strategy,

@@ -25,6 +25,7 @@ def render():
     analyzer = ModelAnalyzer()
     hw_db = HardwareDB()
     cal_mgr = CalibrationManager()
+    cal_mgr.load()
 
     st.header("算力估算")
 
@@ -115,6 +116,7 @@ def render():
 
             if configs:
                 rows = []
+                chart_data = []
                 for c in configs:
                     # Apply calibration via factor
                     factor = cal_mgr.get_factor(model_type, c.hardware.name)
@@ -131,18 +133,13 @@ def render():
                         "并行策略": c.parallel_strategy,
                         "满足基线": "✅" if c.meets_baseline else "❌",
                     })
+                    chart_data.append({
+                        "hardware": c.hardware.name,
+                        "throughput": adj_tp,
+                        "meets_baseline": c.meets_baseline,
+                    })
 
                 st.table(rows)
-
-                # Throughput comparison chart
-                chart_data = [
-                    {
-                        "hardware": r["硬件型号"],
-                        "throughput": float(r["预估吞吐"].split()[0]),
-                        "meets_baseline": "✅" in r["满足基线"],
-                    }
-                    for r in rows
-                ]
                 fig_tp = render_throughput_bar(chart_data)
                 st.plotly_chart(fig_tp, use_container_width=True)
             else:

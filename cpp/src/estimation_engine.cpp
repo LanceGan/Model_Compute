@@ -97,7 +97,7 @@ double EstimationEngine::estimate_moe(const ModelParams& p, EstimationResult& r)
     double routing_overhead = base_flops * 0.01;
     r.flops_total = (base_flops + routing_overhead) * p.concurrency;
 
-    double bytes_per_token = p.param_billions * 1e9 * bpp + 2.0 * num_layers * hidden_dim * bpp;
+    double bytes_per_token = active_params_b * 1e9 * bpp + 2.0 * num_layers * hidden_dim * bpp;
     r.bandwidth_gbs = bytes_per_token * 10.0 / 1e9;
 
     return r.memory_gb;

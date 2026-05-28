@@ -91,14 +91,18 @@ def render():
         uploaded = st.file_uploader("上传 CSV 文件", type=["csv"])
         if uploaded:
             import tempfile, os
-            with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as f:
-                f.write(uploaded.getvalue().decode())
-                tmp_path = f.name
-            count = cal_mgr.import_csv(tmp_path)
-            os.unlink(tmp_path)
-            cal_mgr.save()
-            st.success(f"成功导入 {count} 条校准记录")
-            st.rerun()
+            tmp_path = None
+            try:
+                with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as f:
+                    f.write(uploaded.getvalue().decode())
+                    tmp_path = f.name
+                count = cal_mgr.import_csv(tmp_path)
+                cal_mgr.save()
+                st.success(f"成功导入 {count} 条校准记录")
+                st.rerun()
+            finally:
+                if tmp_path and os.path.exists(tmp_path):
+                    os.unlink(tmp_path)
 
         # Manual add
         st.markdown("---")

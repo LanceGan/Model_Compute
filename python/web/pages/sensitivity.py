@@ -1,6 +1,7 @@
 import streamlit as st
 from python.core.model_analyzer import ModelAnalyzer
 from python.core.hardware_db import HardwareDB
+from python.core.calibration_mgr import CalibrationManager
 from python.web.components.charts import render_sensitivity_curve
 
 import sys
@@ -23,6 +24,8 @@ def render():
 
     analyzer = ModelAnalyzer()
     hw_db = HardwareDB()
+    cal_mgr = CalibrationManager()
+    cal_mgr.load()
 
     st.header("敏感性分析")
     st.markdown("分析不同参数变化对算力需求和预估性能的影响。")
@@ -41,6 +44,22 @@ def render():
     with col2:
         hardware_name = st.selectbox("目标硬件", [h["name"] for h in hw_db.list_hardware()], key="sa_hw")
         max_tokens = st.slider("最大 tokens", 512, 32768, 2048, step=512, key="sa_tokens")
+
+    # Conditional params
+    reasoning_depth = 0
+    image_resolution = 0
+    num_images = 1
+
+    if model_type == "o1_reasoning":
+        reasoning_depth = st.selectbox(
+            "推理深度", [1, 2, 3],
+            format_func=lambda x: {1: "轻度 (2-3x)", 2: "中度 (3-5x)", 3: "重度 (5-10x)"}[x],
+            key="sa_depth",
+        )
+
+    if model_type == "multimodal":
+        image_resolution = st.selectbox("图像分辨率", [224, 336, 448], index=1, key="sa_res")
+        num_images = st.slider("图像数量", 1, 10, 1, key="sa_imgs")
 
     analysis_var = st.selectbox("分析变量", ["并发量", "参数量", "序列长度"], key="sa_var")
 
@@ -72,13 +91,17 @@ def render():
                     preset_name=preset_name if preset_name != "自定义" else None,
                     param_billions=param_billions,
                     quant=quant, concurrency=conc, max_tokens=max_tokens,
+                    reasoning_depth=reasoning_depth,
+                    image_resolution=image_resolution,
+                    num_images=num_images,
                 )
                 result = engine.estimate(params)
                 configs = matcher.match(result, params, target_hw, 10.0)
                 if configs:
+                    factor = cal_mgr.get_factor(model_type, hardware_name)
                     x_values.append(conc)
-                    y_throughput.append(configs[0].estimated_throughput)
-                    y_memory.append(result.memory_gb)
+                    y_throughput.append(configs[0].estimated_throughput * factor.throughput_factor)
+                    y_memory.append(result.memory_gb * factor.memory_factor)
                     y_cards.append(configs[0].num_cards)
             x_label = "并发量"
 
@@ -86,15 +109,19 @@ def render():
             x_range = [1.0, 3.0, 7.0, 13.0, 30.0, 70.0, 130.0]
             for pb in x_range:
                 params = analyzer.create_params(
-                    model_type="dense", param_billions=pb,
+                    model_type=model_type, param_billions=pb,
                     quant=quant, concurrency=1, max_tokens=max_tokens,
+                    reasoning_depth=reasoning_depth,
+                    image_resolution=image_resolution,
+                    num_images=num_images,
                 )
                 result = engine.estimate(params)
                 configs = matcher.match(result, params, target_hw, 10.0)
                 if configs:
+                    factor = cal_mgr.get_factor(model_type, hardware_name)
                     x_values.append(pb)
-                    y_throughput.append(configs[0].estimated_throughput)
-                    y_memory.append(result.memory_gb)
+                    y_throughput.append(configs[0].estimated_throughput * factor.throughput_factor)
+                    y_memory.append(result.memory_gb * factor.memory_factor)
                     y_cards.append(configs[0].num_cards)
             x_label = "参数量 (B)"
 
@@ -106,13 +133,17 @@ def render():
                     preset_name=preset_name if preset_name != "自定义" else None,
                     param_billions=param_billions,
                     quant=quant, concurrency=1, max_tokens=seq,
+                    reasoning_depth=reasoning_depth,
+                    image_resolution=image_resolution,
+                    num_images=num_images,
                 )
                 result = engine.estimate(params)
                 configs = matcher.match(result, params, target_hw, 10.0)
                 if configs:
+                    factor = cal_mgr.get_factor(model_type, hardware_name)
                     x_values.append(seq)
-                    y_throughput.append(configs[0].estimated_throughput)
-                    y_memory.append(result.memory_gb)
+                    y_throughput.append(configs[0].estimated_throughput * factor.throughput_factor)
+                    y_memory.append(result.memory_gb * factor.memory_factor)
                     y_cards.append(configs[0].num_cards)
             x_label = "最大序列长度"
 

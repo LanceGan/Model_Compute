@@ -77,8 +77,12 @@ class CalibrationManager:
         if not matching:
             return type("Factor", (), {"throughput_factor": 1.0, "memory_factor": 1.0, "num_points": 0})()
 
-        avg_tp = sum(p["actual_throughput"] / p["predicted_throughput"] for p in matching) / len(matching)
-        avg_mem = sum(p["actual_memory"] / p["predicted_memory"] for p in matching) / len(matching)
+        valid_tp = [p["actual_throughput"] / p["predicted_throughput"]
+                     for p in matching if p["predicted_throughput"] > 0 and p["actual_throughput"] > 0]
+        valid_mem = [p["actual_memory"] / p["predicted_memory"]
+                     for p in matching if p["predicted_memory"] > 0 and p["actual_memory"] > 0]
+        avg_tp = sum(valid_tp) / len(valid_tp) if valid_tp else 1.0
+        avg_mem = sum(valid_mem) / len(valid_mem) if valid_mem else 1.0
         return type("Factor", (), {
             "throughput_factor": avg_tp,
             "memory_factor": avg_mem,
@@ -117,7 +121,18 @@ class CalibrationManager:
     def load(self, path: Optional[str] = None):
         load_path = Path(path) if path else self._dir / "calibration.csv"
         if load_path.exists():
+            self._points.clear()
+            if self._cal:
+                self._cal = _mc.Calibration()
             self.import_csv(str(load_path))
 
     def list_entries(self) -> list[dict]:
         return self._points
+
+    def adjust_throughput(self, predicted: float, model_type: str, hardware_name: str) -> float:
+        factor = self.get_factor(model_type, hardware_name)
+        return predicted * factor.throughput_factor
+
+    def adjust_memory(self, predicted: float, model_type: str, hardware_name: str) -> float:
+        factor = self.get_factor(model_type, hardware_name)
+        return predicted * factor.memory_factor

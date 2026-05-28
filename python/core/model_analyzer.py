@@ -71,12 +71,17 @@ class ModelAnalyzer:
         max_tokens: int = 2048,
         num_experts: int = 0,
         active_experts: int = 0,
-        reasoning_depth: int = 0,
-        image_resolution: int = 0,
+        reasoning_depth: Optional[int] = None,
+        image_resolution: Optional[int] = None,
         num_images: int = 1,
     ):
         if _mc is None:
             raise RuntimeError("C++ module not available. Build with: bash scripts/build.sh")
+
+        if model_type not in _TYPE_MAP:
+            raise ValueError(f"未知的模型类型: {model_type}，可选: {list(_TYPE_MAP.keys())}")
+        if quant not in _QUANT_MAP:
+            raise ValueError(f"未知的量化方案: {quant}，可选: {list(_QUANT_MAP.keys())}")
 
         params = _mc.ModelParams()
         params.type = _TYPE_MAP[model_type]
@@ -96,13 +101,13 @@ class ModelAnalyzer:
             params.param_billions = param_billions
             params.num_experts = num_experts
             params.active_experts = active_experts
-            params.reasoning_depth = reasoning_depth
-            params.image_resolution = image_resolution
+            params.reasoning_depth = reasoning_depth if reasoning_depth is not None else 0
+            params.image_resolution = image_resolution if image_resolution is not None else 0
 
-        # Override reasoning_depth and multimodal params if explicitly provided
-        if reasoning_depth > 0:
+        # Override if explicitly provided (including 0, which disables the feature)
+        if reasoning_depth is not None:
             params.reasoning_depth = reasoning_depth
-        if image_resolution > 0:
+        if image_resolution is not None:
             params.image_resolution = image_resolution
         params.num_images = num_images
 

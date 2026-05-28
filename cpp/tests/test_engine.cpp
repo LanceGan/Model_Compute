@@ -100,7 +100,7 @@ TEST(HardwareMatcher, SingleCardSufficient) {
     HardwareMatcher matcher;
     EstimationResult est;
     est.memory_gb = 10.0;
-    est.flops_total = 1e18;
+    est.flops_total = 1e14;
     est.bandwidth_gbs = 50.0;
 
     ModelParams mp;
