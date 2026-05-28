@@ -30,11 +30,43 @@ double Calibration::adjust_memory(double predicted, const std::string& model_typ
 }
 
 void Calibration::load_from_file(const std::string& path) {
-    // Stub - will be implemented in Task 4
+    std::ifstream file(path);
+    if (!file.is_open()) return;
+
+    std::string line;
+    while (std::getline(file, line)) {
+        if (line.empty() || line[0] == '#') continue;
+        CalibrationPoint pt;
+        size_t pos = 0;
+        auto next = [&]() -> std::string {
+            size_t end = line.find(',', pos);
+            std::string val = line.substr(pos, end - pos);
+            pos = (end == std::string::npos) ? end : end + 1;
+            return val;
+        };
+        pt.model_type = next();
+        pt.hardware_name = next();
+        pt.predicted_throughput = std::stod(next());
+        pt.actual_throughput = std::stod(next());
+        pt.predicted_memory = std::stod(next());
+        pt.actual_memory = std::stod(next());
+        add_point(pt);
+    }
 }
 
 void Calibration::save_to_file(const std::string& path) const {
-    // Stub - will be implemented in Task 4
+    std::ofstream file(path);
+    file << "# model_type,hardware_name,predicted_tp,actual_tp,predicted_mem,actual_mem\n";
+    for (const auto& [key, pts] : points_) {
+        for (const auto& p : pts) {
+            file << p.model_type << ","
+                 << p.hardware_name << ","
+                 << p.predicted_throughput << ","
+                 << p.actual_throughput << ","
+                 << p.predicted_memory << ","
+                 << p.actual_memory << "\n";
+        }
+    }
 }
 
 void Calibration::recompute_factor(const std::string& model_type, const std::string& hardware_name) {

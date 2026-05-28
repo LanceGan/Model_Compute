@@ -1,7 +1,10 @@
 #include <gtest/gtest.h>
 #include "estimation_engine.h"
 #include "hardware_matcher.h"
+#include "calibration.h"
 #include <cmath>
+#include <cstdlib>
+#include <string>
 
 using namespace model_compute;
 
@@ -174,4 +177,98 @@ TEST(HardwareMatcher, MultipleHardwareOptions) {
 
     auto configs = matcher.match(est, mp, {a100, h100}, 10.0);
     EXPECT_GE(configs.size(), 2u);
+}
+
+TEST(Calibration, AddPointAndRetrieve) {
+    Calibration cal;
+    CalibrationPoint pt;
+    pt.model_type = "dense";
+    pt.hardware_name = "A100 80G";
+    pt.predicted_throughput = 20.0;
+    pt.actual_throughput = 16.0;
+    pt.predicted_memory = 14.0;
+    pt.actual_memory = 15.5;
+
+    cal.add_point(pt);
+    auto factor = cal.get_factor("dense", "A100 80G");
+
+    EXPECT_NEAR(factor.throughput_factor, 0.8, 0.01);  // 16/20
+    EXPECT_NEAR(factor.memory_factor, 1.107, 0.01);    // 15.5/14
+    EXPECT_EQ(factor.num_points, 1);
+}
+
+TEST(Calibration, MultiplePointsAverage) {
+    Calibration cal;
+
+    CalibrationPoint pt1;
+    pt1.model_type = "dense";
+    pt1.hardware_name = "A100 80G";
+    pt1.predicted_throughput = 20.0;
+    pt1.actual_throughput = 16.0;
+    pt1.predicted_memory = 14.0;
+    pt1.actual_memory = 15.0;
+
+    CalibrationPoint pt2;
+    pt2.model_type = "dense";
+    pt2.hardware_name = "A100 80G";
+    pt2.predicted_throughput = 30.0;
+    pt2.actual_throughput = 25.5;
+    pt2.predicted_memory = 28.0;
+    pt2.actual_memory = 30.0;
+
+    cal.add_point(pt1);
+    cal.add_point(pt2);
+    auto factor = cal.get_factor("dense", "A100 80G");
+
+    // Average of (16/20=0.8) and (25.5/30=0.85) = 0.825
+    EXPECT_NEAR(factor.throughput_factor, 0.825, 0.01);
+    EXPECT_EQ(factor.num_points, 2);
+}
+
+TEST(Calibration, UnknownKeyReturnsDefault) {
+    Calibration cal;
+    auto factor = cal.get_factor("moe", "H100");
+    EXPECT_NEAR(factor.throughput_factor, 1.0, 0.001);
+    EXPECT_NEAR(factor.memory_factor, 1.0, 0.001);
+    EXPECT_EQ(factor.num_points, 0);
+}
+
+TEST(Calibration, AdjustThroughput) {
+    Calibration cal;
+    CalibrationPoint pt;
+    pt.model_type = "dense";
+    pt.hardware_name = "A100 80G";
+    pt.predicted_throughput = 20.0;
+    pt.actual_throughput = 16.0;
+    pt.predicted_memory = 14.0;
+    pt.actual_memory = 15.0;
+    cal.add_point(pt);
+
+    double adjusted = cal.adjust_throughput(25.0, "dense", "A100 80G");
+    EXPECT_NEAR(adjusted, 20.0, 0.1);  // 25 * 0.8
+}
+
+TEST(Calibration, SaveAndLoad) {
+    Calibration cal;
+    CalibrationPoint pt;
+    pt.model_type = "dense";
+    pt.hardware_name = "A100 80G";
+    pt.predicted_throughput = 20.0;
+    pt.actual_throughput = 16.0;
+    pt.predicted_memory = 14.0;
+    pt.actual_memory = 15.0;
+    cal.add_point(pt);
+
+    const char* tmp = std::getenv("TEMP");
+    if (!tmp) tmp = std::getenv("TMP");
+    if (!tmp) tmp = ".";
+    std::string path = std::string(tmp) + "/test_calibration.csv";
+    cal.save_to_file(path);
+
+    Calibration cal2;
+    cal2.load_from_file(path);
+    auto factor = cal2.get_factor("dense", "A100 80G");
+    EXPECT_NEAR(factor.throughput_factor, 0.8, 0.01);
+
+    std::remove(path.c_str());
 }
