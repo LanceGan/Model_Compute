@@ -288,7 +288,7 @@ TEST(RecommendationEstimation, DLRMEmbeddingMemoryDominates) {
 
     auto result = engine.estimate(params);
     EXPECT_GT(result.weight_memory_gb, 0.5);
-    EXPECT_LT(result.weight_memory_gb, 2.0);
+    EXPECT_LT(result.weight_memory_gb, 1.0);
     EXPECT_GT(result.memory_gb, 0.5);
 }
 
@@ -347,6 +347,7 @@ TEST(RecommendationEstimation, DLRMFLOPsPositive) {
 
 TEST(RecommendationEstimation, SequentialRecAddsEmbeddingToDense) {
     EstimationEngine engine;
+    // Sequential recommendation (no mlp_dims) reuses Dense + item embedding
     ModelParams params;
     params.type = ModelType::RECOMMENDATION;
     params.param_billions = 0.5;
@@ -358,6 +359,18 @@ TEST(RecommendationEstimation, SequentialRecAddsEmbeddingToDense) {
     params.embed_dim = 64;
 
     auto result = engine.estimate(params);
+
+    // Compare with pure Dense baseline
+    ModelParams dense_params;
+    dense_params.type = ModelType::DENSE;
+    dense_params.param_billions = 0.5;
+    dense_params.quant = Quantization::FP16;
+    dense_params.concurrency = 1;
+    dense_params.max_tokens = 2048;
+    auto dense_result = engine.estimate(dense_params);
+
     EXPECT_GT(result.memory_gb, 0);
     EXPECT_GT(result.weight_memory_gb, 0);
+    // Sequential rec should have MORE memory than pure dense (embedding added)
+    EXPECT_GT(result.weight_memory_gb, dense_result.weight_memory_gb);
 }

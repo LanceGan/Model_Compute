@@ -156,6 +156,10 @@ double EstimationEngine::estimate_multimodal(const ModelParams& p, EstimationRes
 }
 
 double EstimationEngine::estimate_recommendation(const ModelParams& p, EstimationResult& r) {
+    if (p.num_sparse_features <= 0 || p.vocab_size_per_feature <= 0 || p.embed_dim <= 0) {
+        return r.memory_gb;  // Invalid config, return zero
+    }
+
     double bpp = bytes_per_param(p.quant);
 
     if (!p.mlp_dims.empty() && p.num_sparse_features > 0) {
@@ -164,11 +168,15 @@ double EstimationEngine::estimate_recommendation(const ModelParams& p, Estimatio
                                  * p.vocab_size_per_feature * p.embed_dim * bpp;
         r.weight_memory_gb = embedding_bytes / 1e9;
 
-        // MLP parameters: each feature has its own MLP
+        // MLP parameters: In DLRM, each sparse feature has an independent
+        // bottom MLP that transforms its embedding before feature interaction.
+        // This is standard DLRM architecture (Naumov et al., arXiv:1906.00091).
         double mlp_params = 0;
+        double mlp_flops_per_feature = 0;
         int prev_dim = p.embed_dim;
         for (int dim : p.mlp_dims) {
             mlp_params += static_cast<double>(prev_dim) * dim + dim;
+            mlp_flops_per_feature += 2.0 * prev_dim * dim;
             prev_dim = dim;
         }
         double mlp_bytes = mlp_params * p.num_sparse_features * bpp;
@@ -180,15 +188,11 @@ double EstimationEngine::estimate_recommendation(const ModelParams& p, Estimatio
         r.memory_gb = total_bytes * 1.10 / 1e9;
 
         // FLOPs: MLP forward pass per feature
-        double mlp_flops_per_feature = 0;
-        prev_dim = p.embed_dim;
-        for (int dim : p.mlp_dims) {
-            mlp_flops_per_feature += 2.0 * prev_dim * dim;
-            prev_dim = dim;
-        }
         r.flops_total = mlp_flops_per_feature * p.num_sparse_features * p.concurrency;
 
-        // Bandwidth: embedding lookups are random access
+        // Bandwidth: per-request estimate (not scaled by concurrency), consistent
+        // with how estimate_dense handles bandwidth for a single request.
+        // Embedding lookups are random access.
         double lookup_bytes = p.num_sparse_features * p.embed_dim * bpp;
         r.bandwidth_gbs = lookup_bytes * 10.0 / 1e9;
 
