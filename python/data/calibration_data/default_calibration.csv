@@ -1,0 +1,9 @@
+# model_type,hardware_name,predicted_tp,actual_tp,predicted_mem,actual_mem
+dense,NVIDIA A100 80GB,20.0,15.0,14.0,15.5
+dense,NVIDIA H100 80GB,60.0,48.0,14.0,15.2
+dense,华为 Ascend 910B,18.0,12.6,14.0,15.8
+dense,NVIDIA A100 40GB,20.0,14.0,14.0,15.5
+dense,NVIDIA L40S,18.0,12.6,14.0,15.5
+moe,NVIDIA A100 80GB,15.0,9.75,80.0,92.0
+moe,NVIDIA H100 80GB,45.0,33.75,80.0,88.0
+moe,华为 Ascend 910B,12.0,8.4,80.0,94.0

@@ -53,7 +53,16 @@ def test_save_and_load(tmp_path):
 
 def test_list_calibrations():
     mgr = CalibrationManager()
+    initial_count = len(mgr.list_entries())  # includes auto-loaded defaults
     mgr.add_point("dense", "A100", 20.0, 16.0, 14.0, 15.0)
     mgr.add_point("moe", "H100", 30.0, 27.0, 50.0, 55.0)
     entries = mgr.list_entries()
-    assert len(entries) == 2
+    assert len(entries) == initial_count + 2
+
+
+def test_default_calibration_auto_loaded():
+    mgr = CalibrationManager()
+    factor = mgr.get_factor("dense", "NVIDIA A100 80GB")
+    assert factor.num_points > 0
+    assert abs(factor.throughput_factor - 0.75) < 0.01  # 15/20 = 0.75
+    assert abs(factor.memory_factor - 1.107) < 0.01     # 15.5/14 = 1.107

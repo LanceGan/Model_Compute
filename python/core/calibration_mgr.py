@@ -36,6 +36,11 @@ class CalibrationManager:
             self._cal = None
         self._points: list[dict] = []
 
+        # Auto-load default calibration data
+        default_csv = self._dir / "default_calibration.csv"
+        if default_csv.exists():
+            self.import_csv(str(default_csv))
+
     def add_point(
         self,
         model_type: str,
@@ -119,11 +124,16 @@ class CalibrationManager:
                         f"{p['predicted_memory']},{p['actual_memory']}\n")
 
     def load(self, path: Optional[str] = None):
+        self._points.clear()
+        if self._cal:
+            self._cal = _mc.Calibration()
+        # Always reload defaults first
+        default_csv = self._dir / "default_calibration.csv"
+        if default_csv.exists():
+            self.import_csv(str(default_csv))
+        # Then load user calibration
         load_path = Path(path) if path else self._dir / "calibration.csv"
         if load_path.exists():
-            self._points.clear()
-            if self._cal:
-                self._cal = _mc.Calibration()
             self.import_csv(str(load_path))
 
     def list_entries(self) -> list[dict]:
