@@ -185,3 +185,77 @@ class TestIntegration:
         factor = self.cal_mgr.get_factor("dense", best.hardware.name)
         adj_tp = best.estimated_throughput * factor.throughput_factor
         assert adj_tp > 0
+
+    def test_recommendation_dlrm_estimation(self):
+        params = self.analyzer.create_params(
+            model_type="recommendation",
+            preset_name="DLRM-small",
+            quant="FP16",
+            concurrency=1,
+            max_tokens=2048,
+        )
+        result = self.engine.estimate(params)
+        assert result.memory_gb > 0.5
+        assert result.flops_total > 0
+
+    def test_recommendation_dlrm_large_more_memory(self):
+        params_small = self.analyzer.create_params(
+            model_type="recommendation",
+            preset_name="DLRM-small",
+            quant="FP16",
+            concurrency=1,
+            max_tokens=2048,
+        )
+        params_large = self.analyzer.create_params(
+            model_type="recommendation",
+            preset_name="DLRM-large",
+            quant="FP16",
+            concurrency=1,
+            max_tokens=2048,
+        )
+        r_small = self.engine.estimate(params_small)
+        r_large = self.engine.estimate(params_large)
+        assert r_large.memory_gb > r_small.memory_gb
+
+    def test_recommendation_int8_less_memory(self):
+        params_fp16 = self.analyzer.create_params(
+            model_type="recommendation",
+            preset_name="DLRM-small",
+            quant="FP16",
+            concurrency=1,
+            max_tokens=2048,
+        )
+        params_int8 = self.analyzer.create_params(
+            model_type="recommendation",
+            preset_name="DLRM-small",
+            quant="INT8",
+            concurrency=1,
+            max_tokens=2048,
+        )
+        r_fp16 = self.engine.estimate(params_fp16)
+        r_int8 = self.engine.estimate(params_int8)
+        assert r_int8.weight_memory_gb < r_fp16.weight_memory_gb
+
+    def test_recommendation_hardware_matching(self):
+        params = self.analyzer.create_params(
+            model_type="recommendation",
+            preset_name="DLRM-small",
+            quant="FP16",
+            concurrency=1,
+            max_tokens=2048,
+        )
+        result = self.engine.estimate(params)
+        hw_pool = self.hw_db.to_cpp_hardware_list()
+        configs = self.matcher.match(result, params, hw_pool, 10.0)
+        assert len(configs) > 0
+
+    def test_recommendation_sasrec(self):
+        params = self.analyzer.create_params(
+            model_type="recommendation",
+            preset_name="SASRec",
+            quant="FP16",
+            concurrency=1,
+            max_tokens=2048,
+        )
+        result = self.engine.estimate(params)
+        assert result.memory_gb > 0
