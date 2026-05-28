@@ -97,3 +97,14 @@ def test_save_and_load(tmp_path):
     hw = db2.get_hardware("NVIDIA A100 80GB")
     assert hw is not None
     assert hw["specs"]["memory_gb"] == 80
+
+
+def test_new_hardware_present():
+    db = HardwareDB()
+    hw_list = db.list_hardware()
+    names = [h["name"] for h in hw_list]
+    assert "华为 Ascend 910A" in names
+    assert "华为 Ascend 910C" in names
+    assert "华为 Ascend 310P" in names
+    assert "海光 DCU" in names
+    assert "沐曦 N100" in names

@@ -170,6 +170,101 @@
       },
       "cost_per_unit": 7000,
       "notes": "国产NPU"
+    },
+    {
+      "name": "华为 Ascend 910A",
+      "vendor": "华为",
+      "architecture": "达芬奇",
+      "type": "NPU",
+      "specs": {
+        "fp16_tflops": 320,
+        "int8_tops": 640,
+        "fp32_tflops": 0,
+        "memory_gb": 32,
+        "memory_type": "HBM2",
+        "memory_bandwidth_gbs": 1200,
+        "nvlink_bandwidth_gbs": 0,
+        "pcie_version": "4.0",
+        "max_tdp_watts": 310
+      },
+      "cost_per_unit": 9000,
+      "notes": "昇腾系列NPU，支持HCCS互联"
+    },
+    {
+      "name": "华为 Ascend 910C",
+      "vendor": "华为",
+      "architecture": "达芬奇",
+      "type": "NPU",
+      "specs": {
+        "fp16_tflops": 400,
+        "int8_tops": 800,
+        "fp32_tflops": 0,
+        "memory_gb": 64,
+        "memory_type": "HBM2e",
+        "memory_bandwidth_gbs": 1600,
+        "nvlink_bandwidth_gbs": 0,
+        "pcie_version": "5.0",
+        "max_tdp_watts": 350
+      },
+      "cost_per_unit": 15000,
+      "notes": "昇腾最新NPU，高带宽"
+    },
+    {
+      "name": "华为 Ascend 310P",
+      "vendor": "华为",
+      "architecture": "达芬奇",
+      "type": "NPU",
+      "specs": {
+        "fp16_tflops": 150,
+        "int8_tops": 300,
+        "fp32_tflops": 0,
+        "memory_gb": 24,
+        "memory_type": "LPDDR4x",
+        "memory_bandwidth_gbs": 100,
+        "nvlink_bandwidth_gbs": 0,
+        "pcie_version": "4.0",
+        "max_tdp_watts": 100
+      },
+      "cost_per_unit": 3000,
+      "notes": "昇腾推理NPU，低功耗"
+    },
+    {
+      "name": "海光 DCU",
+      "vendor": "海光",
+      "architecture": "DCU",
+      "type": "GPU",
+      "specs": {
+        "fp16_tflops": 200,
+        "int8_tops": 400,
+        "fp32_tflops": 50,
+        "memory_gb": 64,
+        "memory_type": "HBM2",
+        "memory_bandwidth_gbs": 800,
+        "nvlink_bandwidth_gbs": 0,
+        "pcie_version": "4.0",
+        "max_tdp_watts": 300
+      },
+      "cost_per_unit": 8000,
+      "notes": "海光国产DCU"
+    },
+    {
+      "name": "沐曦 N100",
+      "vendor": "沐曦",
+      "architecture": "MXMACA",
+      "type": "GPU",
+      "specs": {
+        "fp16_tflops": 200,
+        "int8_tops": 400,
+        "fp32_tflops": 50,
+        "memory_gb": 48,
+        "memory_type": "HBM2e",
+        "memory_bandwidth_gbs": 600,
+        "nvlink_bandwidth_gbs": 0,
+        "pcie_version": "4.0",
+        "max_tdp_watts": 250
+      },
+      "cost_per_unit": 6000,
+      "notes": "沐曦国产GPU"
     }
   ]
 }
