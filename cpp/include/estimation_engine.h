@@ -37,6 +37,8 @@ struct EstimationResult {
     double bandwidth_gbs;
     double kv_cache_gb;
     double weight_memory_gb;
+    double runtime_overhead_gb;
+    double fragmentation_gb;
 };
 
 class EstimationEngine {

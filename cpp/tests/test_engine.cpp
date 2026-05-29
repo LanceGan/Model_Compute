@@ -495,6 +495,46 @@ TEST(ModelFamilyConfig, DefaultKVHeadsEqualsNumHeads) {
     EXPECT_NEAR(r_default.kv_cache_gb, r_explicit.kv_cache_gb, 0.05);
 }
 
+TEST(FrameworkOverhead, RuntimeOverheadAdded) {
+    EstimationEngine engine;
+    ModelParams params;
+    params.type = ModelType::DENSE;
+    params.param_billions = 7.0;
+    params.quant = Quantization::FP16;
+    params.concurrency = 1;
+    params.max_tokens = 2048;
+
+    auto result = engine.estimate(params);
+    EXPECT_GT(result.runtime_overhead_gb, 0.5);
+    EXPECT_LT(result.runtime_overhead_gb, 1.5);
+}
+
+TEST(FrameworkOverhead, FragmentationPositive) {
+    EstimationEngine engine;
+    ModelParams params;
+    params.type = ModelType::DENSE;
+    params.param_billions = 70.0;
+    params.quant = Quantization::FP16;
+    params.concurrency = 1;
+    params.max_tokens = 4096;
+
+    auto result = engine.estimate(params);
+    EXPECT_GT(result.fragmentation_gb, 0);
+}
+
+TEST(FrameworkOverhead, TotalMemoryIncludesAllComponents) {
+    EstimationEngine engine;
+    ModelParams params;
+    params.type = ModelType::DENSE;
+    params.param_billions = 7.0;
+    params.quant = Quantization::FP16;
+    params.concurrency = 1;
+    params.max_tokens = 2048;
+
+    auto result = engine.estimate(params);
+    EXPECT_GT(result.memory_gb, result.weight_memory_gb + result.runtime_overhead_gb);
+}
+
 TEST(HardwareMatcher, HuaweiHCCSOverhead) {
     HardwareMatcher matcher;
     EstimationResult est;

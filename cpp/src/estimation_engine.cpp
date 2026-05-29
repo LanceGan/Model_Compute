@@ -72,7 +72,16 @@ double EstimationEngine::estimate_dense(const ModelParams& p, EstimationResult& 
     double activation_bytes = p.concurrency * p.max_tokens * hidden_dim * num_layers * bpp * activation_factor;
 
     double total_bytes = params_bytes + kv_bytes + activation_bytes;
-    r.memory_gb = total_bytes * 1.10 / 1e9;
+    double base_memory_gb = total_bytes / 1e9;
+
+    // Framework overhead
+    r.runtime_overhead_gb = 0.8;  // CUDA/PyTorch runtime
+
+    // Fragmentation: larger models have lower fragmentation ratio
+    double frag_ratio = (base_memory_gb > 50.0) ? 0.05 : 0.10;
+    r.fragmentation_gb = base_memory_gb * frag_ratio;
+
+    r.memory_gb = base_memory_gb + r.fragmentation_gb + r.runtime_overhead_gb;
 
     int input_seq = p.max_tokens / 2;
     int output_seq = p.max_tokens / 2;
@@ -107,7 +116,16 @@ double EstimationEngine::estimate_moe(const ModelParams& p, EstimationResult& r)
     r.kv_cache_gb = kv_bytes / 1e9;
 
     double total_bytes = total_params_bytes + kv_bytes;
-    r.memory_gb = total_bytes * 1.10 / 1e9;
+    double base_memory_gb = total_bytes / 1e9;
+
+    // Framework overhead
+    r.runtime_overhead_gb = 0.8;  // CUDA/PyTorch runtime
+
+    // Fragmentation: larger models have lower fragmentation ratio
+    double frag_ratio = (base_memory_gb > 50.0) ? 0.05 : 0.10;
+    r.fragmentation_gb = base_memory_gb * frag_ratio;
+
+    r.memory_gb = base_memory_gb + r.fragmentation_gb + r.runtime_overhead_gb;
 
     int input_seq = p.max_tokens / 2;
     int output_seq = p.max_tokens / 2;
@@ -200,7 +218,16 @@ double EstimationEngine::estimate_recommendation(const ModelParams& p, Estimatio
         r.kv_cache_gb = 0;
 
         double total_bytes = embedding_bytes + mlp_bytes;
-        r.memory_gb = total_bytes * 1.10 / 1e9;
+        double base_memory_gb = total_bytes / 1e9;
+
+        // Framework overhead
+        r.runtime_overhead_gb = 0.8;  // CUDA/PyTorch runtime
+
+        // Fragmentation: larger models have lower fragmentation ratio
+        double frag_ratio = (base_memory_gb > 50.0) ? 0.05 : 0.10;
+        r.fragmentation_gb = base_memory_gb * frag_ratio;
+
+        r.memory_gb = base_memory_gb + r.fragmentation_gb + r.runtime_overhead_gb;
 
         // FLOPs: MLP forward pass per feature
         r.flops_total = mlp_flops_per_feature * p.num_sparse_features * p.concurrency;
