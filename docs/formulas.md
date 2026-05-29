@@ -62,7 +62,37 @@ Decode 阶段（每 token）= 2 × 参数量
 实际吞吐 = min(计算受限, 带宽受限)
 ```
 
-### 1.4 计算示例：LLaMA-7B FP16 在 A100 80G
+### 1.4 GQA/MQA 注意力优化
+
+现代模型（LLaMA-3、Qwen-2.5）使用 Grouped Query Attention (GQA)：
+```
+标准 MHA: KV heads = Q heads（如 32 个 KV head）
+GQA:      KV heads < Q heads（如 8 个 KV head）
+
+KV Cache 减少比例 = num_kv_heads / num_heads
+  LLaMA-3 8B: 8/32 = 0.25x（减少 75%）
+  Qwen-2.5 7B: 4/28 = 0.14x（减少 86%）
+```
+
+### 1.5 SwiGLU FFN
+
+SwiGLU 激活函数使用三个线性变换（gate + up + down）：
+```
+标准 FFN: 2 × hidden_dim × ffn_dim 参数
+SwiGLU:   3 × hidden_dim × ffn_dim 参数（+33%）
+```
+
+### 1.6 框架开销
+
+```
+运行时固定开销 ≈ 0.8 GB（CUDA/PyTorch runtime）
+内存碎片化 = 基础显存 × fragmentation_ratio
+  大模型（>50GB）: 5%
+  小模型（<10GB）: 10%
+总显存 = 基础显存 + 碎片化 + 运行时开销
+```
+
+### 1.7 计算示例：LLaMA-7B FP16 在 A100 80G
 
 ```
 输入：参数量=7B，量化=FP16，seq_len=2048，并发=1

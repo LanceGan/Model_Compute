@@ -59,6 +59,20 @@ params = analyzer.create_params(
 - DeepFM: DeepFM 基准配置 (39特征, 500K词表)
 - SASRec: 序列推荐 Transformer (50K物品词表)
 
+### 支持的模型预设
+
+| 模型 | 类型 | 参数量 | 特点 |
+|------|------|--------|------|
+| LLaMA-2 7B/13B/70B | Dense | 7-70B | MHA, 标准 FFN |
+| LLaMA-3 8B/70B | Dense | 8-70B | GQA (8 KV heads), SwiGLU |
+| Qwen-2.5 7B/72B | Dense | 7-72B | GQA (4-8 KV heads), SwiGLU |
+| Mixtral 8x7B/22B | MoE | 46-141B | 8 experts, 2 active |
+| DeepSeek-V3 | MoE | 671B | 256 experts, 8 active |
+| DeepSeek-R1 | o1 | 671B | 重度推理 |
+| LLaVA-1.5 7B/13B | Multimodal | 7-13B | ViT-L/14 视觉编码器 |
+| DLRM-small/large | Rec | - | 26 稀疏特征 |
+| SASRec | Rec | - | 序列推荐 Transformer |
+
 ### 多硬件对比
 同时对比所有可用硬件的性能表现。
 
