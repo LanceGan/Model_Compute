@@ -106,7 +106,10 @@ double EstimationEngine::estimate_moe(const ModelParams& p, EstimationResult& r)
     r.weight_memory_gb = total_params_bytes / 1e9;
 
     double active_ratio = static_cast<double>(active_experts) / num_experts;
-    double active_params_b = p.param_billions * active_ratio;
+    double shared_ratio = 0.30;  // Attention + embedding + norms always active
+    double shared_params_b = p.param_billions * shared_ratio;
+    double expert_params_b = p.param_billions * (1.0 - shared_ratio);
+    double active_params_b = shared_params_b + expert_params_b * active_ratio;
 
     int num_layers, hidden_dim, num_heads;
     infer_architecture(p.param_billions, num_layers, hidden_dim, num_heads);
@@ -118,7 +121,8 @@ double EstimationEngine::estimate_moe(const ModelParams& p, EstimationResult& r)
     double kv_bytes = 2.0 * num_layers * kv_dim * p.max_tokens * p.concurrency * kv_bpe;
     r.kv_cache_gb = kv_bytes / 1e9;
 
-    double total_bytes = total_params_bytes + kv_bytes;
+    double activation_bytes = static_cast<double>(p.concurrency) * p.max_tokens * hidden_dim * bpp * 2.0;
+    double total_bytes = total_params_bytes + kv_bytes + activation_bytes;
     double base_memory_gb = total_bytes / 1e9;
 
     // Framework overhead
@@ -178,7 +182,10 @@ double EstimationEngine::estimate_multimodal(const ModelParams& p, EstimationRes
 
     int num_layers, hidden_dim, num_heads;
     infer_architecture(p.param_billions, num_layers, hidden_dim, num_heads);
-    double img_kv_bytes = 2.0 * num_layers * hidden_dim * img_tokens * p.num_images * p.concurrency * bpp;
+    int mm_kv_heads = (p.num_kv_heads > 0) ? p.num_kv_heads : num_heads;
+    int mm_head_dim = (p.head_dim > 0) ? p.head_dim : (hidden_dim / num_heads);
+    int mm_kv_dim = mm_kv_heads * mm_head_dim;
+    double img_kv_bytes = 2.0 * num_layers * mm_kv_dim * img_tokens * p.num_images * p.concurrency * 2.0;
     double img_kv_gb = img_kv_bytes / 1e9;
 
     double vit_flops = 2.0 * vit_params_b * 1e9 * img_tokens * p.num_images * p.concurrency;
