@@ -40,6 +40,8 @@ class CalibrationManager:
         default_csv = self._dir / "default_calibration.csv"
         if default_csv.exists():
             self.import_csv(str(default_csv))
+            for p in self._points:
+                p["_is_default"] = True
 
     def add_point(
         self,
@@ -116,9 +118,10 @@ class CalibrationManager:
 
     def save(self, path: Optional[str] = None):
         save_path = Path(path) if path else self._dir / "calibration.csv"
+        user_points = [p for p in self._points if not p.get("_is_default", False)]
         with open(save_path, "w") as f:
             f.write("# model_type,hardware_name,predicted_tp,actual_tp,predicted_mem,actual_mem\n")
-            for p in self._points:
+            for p in user_points:
                 f.write(f"{p['model_type']},{p['hardware_name']},"
                         f"{p['predicted_throughput']},{p['actual_throughput']},"
                         f"{p['predicted_memory']},{p['actual_memory']}\n")

@@ -68,12 +68,15 @@ def render():
         # Remove hardware
         st.markdown("---")
         st.subheader("删除硬件")
-        del_name = st.selectbox("选择要删除的硬件", [h["name"] for h in hw_list])
-        if st.button("删除", type="secondary"):
-            hw_db.remove_hardware(del_name)
-            hw_db.save()
-            st.success(f"已删除: {del_name}")
-            st.rerun()
+        if hw_list:
+            del_name = st.selectbox("选择要删除的硬件", [h["name"] for h in hw_list])
+            if st.button("删除", type="secondary"):
+                hw_db.remove_hardware(del_name)
+                hw_db.save()
+                st.success(f"已删除: {del_name}")
+                st.rerun()
+        else:
+            st.info("无硬件可删除。")
 
     with tab_cal:
         st.subheader("校准数据管理")
@@ -110,7 +113,7 @@ def render():
         with st.form("add_calibration"):
             col1, col2 = st.columns(2)
             with col1:
-                mt = st.selectbox("模型类型", ["dense", "moe", "o1_reasoning", "multimodal"], key="cal_mt")
+                mt = st.selectbox("模型类型", ["dense", "moe", "o1_reasoning", "multimodal", "recommendation"], key="cal_mt")
                 hw_name = st.text_input("硬件名称", key="cal_hw")
             with col2:
                 pred_tp = st.number_input("预测吞吐", 0.0, value=20.0, key="cal_pred_tp")

@@ -64,8 +64,8 @@ def render():
         max_tokens = st.slider("最大 tokens 数", min_value=512, max_value=32768, value=2048, step=512)
 
         # Conditional params
-        reasoning_depth = 0
-        image_resolution = 0
+        reasoning_depth = None
+        image_resolution = None
         num_images = 1
 
         if model_type == "o1_reasoning":
