@@ -12,7 +12,7 @@ st.markdown("基于异构算力资源池，支持多负载的算力需求表征�
 st.sidebar.title("导航")
 page = st.sidebar.radio(
     "选择功能",
-    ["算力估算", "多硬件对比", "敏感性分析", "管理"],
+    ["算力估算", "多硬件对比", "敏感性分析", "批量估算", "管理"],
     index=0,
 )
 
@@ -24,6 +24,9 @@ elif page == "多硬件对比":
     render()
 elif page == "敏感性分析":
     from python.web.pages.sensitivity import render
+    render()
+elif page == "批量估算":
+    from python.web.pages.batch import render
     render()
 elif page == "管理":
     from python.web.pages.management import render
