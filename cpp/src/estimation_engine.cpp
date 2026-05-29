@@ -63,13 +63,15 @@ double EstimationEngine::estimate_dense(const ModelParams& p, EstimationResult& 
     int effective_kv_heads = (p.num_kv_heads > 0) ? p.num_kv_heads : num_heads;
     int effective_head_dim = (p.head_dim > 0) ? p.head_dim : (hidden_dim / num_heads);
     int kv_dim = effective_kv_heads * effective_head_dim;
-    double kv_bytes = 2.0 * num_layers * kv_dim * p.max_tokens * p.concurrency * bpp;
+    double kv_bpe = 2.0;  // KV cache always FP16 during inference
+    double kv_bytes = 2.0 * num_layers * kv_dim * p.max_tokens * p.concurrency * kv_bpe;
     r.kv_cache_gb = kv_bytes / 1e9;
 
     // Activation memory: based on architecture dimensions
     // Inference factor ≈ 2 (no backward pass intermediates)
     double activation_factor = 2.0;
-    double activation_bytes = p.concurrency * p.max_tokens * hidden_dim * num_layers * bpp * activation_factor;
+    // Inference: activations stored per-layer, not all layers simultaneously
+    double activation_bytes = static_cast<double>(p.concurrency) * p.max_tokens * hidden_dim * bpp * activation_factor;
 
     double total_bytes = params_bytes + kv_bytes + activation_bytes;
     double base_memory_gb = total_bytes / 1e9;
@@ -112,7 +114,8 @@ double EstimationEngine::estimate_moe(const ModelParams& p, EstimationResult& r)
     int effective_kv_heads = (p.num_kv_heads > 0) ? p.num_kv_heads : num_heads;
     int effective_head_dim = (p.head_dim > 0) ? p.head_dim : (hidden_dim / num_heads);
     int kv_dim = effective_kv_heads * effective_head_dim;
-    double kv_bytes = 2.0 * num_layers * kv_dim * p.max_tokens * p.concurrency * bpp;
+    double kv_bpe = 2.0;  // KV cache always FP16 during inference
+    double kv_bytes = 2.0 * num_layers * kv_dim * p.max_tokens * p.concurrency * kv_bpe;
     r.kv_cache_gb = kv_bytes / 1e9;
 
     double total_bytes = total_params_bytes + kv_bytes;

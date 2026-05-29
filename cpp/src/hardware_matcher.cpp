@@ -91,7 +91,7 @@ std::vector<HardwareConfig> HardwareMatcher::match(
         double compute_tflops = (model_params.quant == Quantization::INT8 || model_params.quant == Quantization::INT4)
                                 ? hw.int8_tops : hw.fp16_tflops;
         double compute_throughput = (model_params.param_billions > 0)
-            ? compute_tflops * 1e12 / (2.0 * model_params.param_billions * 1e9)
+            ? compute_tflops * 1e12 * config.num_cards / (2.0 * model_params.param_billions * 1e9)
             : 1e18;
         config.bottleneck_type = (config.estimated_throughput < compute_throughput) ? "memory" : "compute";
         config.estimated_throughput = std::min(config.estimated_throughput, compute_throughput);
