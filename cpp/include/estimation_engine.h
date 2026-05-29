@@ -24,6 +24,11 @@ struct ModelParams {
     int vocab_size_per_feature = 0;
     int embed_dim = 0;
     std::vector<int> mlp_dims;
+
+    // Architecture metadata for accurate estimation
+    int num_kv_heads = 0;    // GQA: < num_heads, MHA: = num_heads (0 = auto)
+    int head_dim = 0;        // Per-head dimension (0 = auto)
+    bool use_swiglu = false; // SwiGLU FFN
 };
 
 struct EstimationResult {

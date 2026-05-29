@@ -13,20 +13,21 @@ double EstimationEngine::bytes_per_param(Quantization q) {
     }
 }
 
-static void infer_architecture(double param_b, int& num_layers, int& hidden_dim) {
+static void infer_architecture(double param_b, int& num_layers, int& hidden_dim, int& num_heads) {
     // Parameterized formula: P ≈ 12 * L * d² (Transformer params ignoring embedding)
     // With typical ratio d/L ≈ 128 for LLaMA-family models
     double p = param_b * 1e9;
     if (p <= 0) {
         num_layers = 2;
         hidden_dim = 512;
+        num_heads = 8;
         return;
     }
     double L = std::pow(p / (12.0 * 128.0 * 128.0), 1.0 / 3.0);
     num_layers = std::max(2, static_cast<int>(std::round(L)));
     hidden_dim = std::max(512, static_cast<int>(std::round(128.0 * num_layers)));
-    // Align to 64 (hardware-friendly alignment)
     hidden_dim = (hidden_dim + 63) / 64 * 64;
+    num_heads = std::max(1, hidden_dim / 128);
 }
 
 EstimationResult EstimationEngine::estimate(const ModelParams& params) {
@@ -56,18 +57,19 @@ double EstimationEngine::estimate_dense(const ModelParams& p, EstimationResult& 
     double params_bytes = p.param_billions * 1e9 * bpp;
     r.weight_memory_gb = params_bytes / 1e9;
 
-    int num_layers, hidden_dim;
-    infer_architecture(p.param_billions, num_layers, hidden_dim);
+    int num_layers, hidden_dim, num_heads;
+    infer_architecture(p.param_billions, num_layers, hidden_dim, num_heads);
 
-    double kv_bytes = 2.0 * num_layers * hidden_dim * p.max_tokens * p.concurrency * bpp;
+    int effective_kv_heads = (p.num_kv_heads > 0) ? p.num_kv_heads : num_heads;
+    int effective_head_dim = (p.head_dim > 0) ? p.head_dim : (hidden_dim / num_heads);
+    int kv_dim = effective_kv_heads * effective_head_dim;
+    double kv_bytes = 2.0 * num_layers * kv_dim * p.max_tokens * p.concurrency * bpp;
     r.kv_cache_gb = kv_bytes / 1e9;
 
     // Activation memory: based on architecture dimensions
     // Inference factor ≈ 2 (no backward pass intermediates)
-    int num_l2, h_dim2;
-    infer_architecture(p.param_billions, num_l2, h_dim2);
     double activation_factor = 2.0;
-    double activation_bytes = p.concurrency * p.max_tokens * h_dim2 * num_l2 * bpp * activation_factor;
+    double activation_bytes = p.concurrency * p.max_tokens * hidden_dim * num_layers * bpp * activation_factor;
 
     double total_bytes = params_bytes + kv_bytes + activation_bytes;
     r.memory_gb = total_bytes * 1.10 / 1e9;
@@ -95,10 +97,13 @@ double EstimationEngine::estimate_moe(const ModelParams& p, EstimationResult& r)
     double active_ratio = static_cast<double>(active_experts) / num_experts;
     double active_params_b = p.param_billions * active_ratio;
 
-    int num_layers, hidden_dim;
-    infer_architecture(p.param_billions, num_layers, hidden_dim);
+    int num_layers, hidden_dim, num_heads;
+    infer_architecture(p.param_billions, num_layers, hidden_dim, num_heads);
 
-    double kv_bytes = 2.0 * num_layers * hidden_dim * p.max_tokens * p.concurrency * bpp;
+    int effective_kv_heads = (p.num_kv_heads > 0) ? p.num_kv_heads : num_heads;
+    int effective_head_dim = (p.head_dim > 0) ? p.head_dim : (hidden_dim / num_heads);
+    int kv_dim = effective_kv_heads * effective_head_dim;
+    double kv_bytes = 2.0 * num_layers * kv_dim * p.max_tokens * p.concurrency * bpp;
     r.kv_cache_gb = kv_bytes / 1e9;
 
     double total_bytes = total_params_bytes + kv_bytes;
@@ -150,8 +155,8 @@ double EstimationEngine::estimate_multimodal(const ModelParams& p, EstimationRes
         img_tokens = patches * patches;
     }
 
-    int num_layers, hidden_dim;
-    infer_architecture(p.param_billions, num_layers, hidden_dim);
+    int num_layers, hidden_dim, num_heads;
+    infer_architecture(p.param_billions, num_layers, hidden_dim, num_heads);
     double img_kv_bytes = 2.0 * num_layers * hidden_dim * img_tokens * p.num_images * p.concurrency * bpp;
     double img_kv_gb = img_kv_bytes / 1e9;
 

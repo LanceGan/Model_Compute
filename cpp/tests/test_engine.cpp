@@ -453,6 +453,48 @@ TEST(HardwareMatcher, NVLinkLowerOverheadThanPCIe) {
     ASSERT_FALSE(pcie_configs.empty());
 }
 
+TEST(ModelFamilyConfig, LLaMA3GQAReducesKVCache) {
+    EstimationEngine engine;
+    ModelParams p_gqa;
+    p_gqa.type = ModelType::DENSE;
+    p_gqa.param_billions = 8.0;
+    p_gqa.quant = Quantization::FP16;
+    p_gqa.concurrency = 1;
+    p_gqa.max_tokens = 2048;
+    p_gqa.num_kv_heads = 8;
+    p_gqa.head_dim = 128;
+
+    ModelParams p_mha = p_gqa;
+    p_mha.num_kv_heads = 32;
+
+    auto r_gqa = engine.estimate(p_gqa);
+    auto r_mha = engine.estimate(p_mha);
+
+    EXPECT_LT(r_gqa.kv_cache_gb, r_mha.kv_cache_gb * 0.3);
+    EXPECT_GT(r_gqa.kv_cache_gb, 0);
+}
+
+TEST(ModelFamilyConfig, DefaultKVHeadsEqualsNumHeads) {
+    EstimationEngine engine;
+    ModelParams p_default;
+    p_default.type = ModelType::DENSE;
+    p_default.param_billions = 7.0;
+    p_default.quant = Quantization::FP16;
+    p_default.concurrency = 1;
+    p_default.max_tokens = 2048;
+    p_default.num_kv_heads = 0;
+    p_default.head_dim = 0;
+
+    ModelParams p_explicit = p_default;
+    p_explicit.num_kv_heads = 32;
+    p_explicit.head_dim = 128;
+
+    auto r_default = engine.estimate(p_default);
+    auto r_explicit = engine.estimate(p_explicit);
+
+    EXPECT_NEAR(r_default.kv_cache_gb, r_explicit.kv_cache_gb, 0.05);
+}
+
 TEST(HardwareMatcher, HuaweiHCCSOverhead) {
     HardwareMatcher matcher;
     EstimationResult est;
