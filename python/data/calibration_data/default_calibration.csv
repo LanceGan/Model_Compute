@@ -1,9 +1,36 @@
 # model_type,hardware_name,predicted_tp,actual_tp,predicted_mem,actual_mem
+# Dense models - NVIDIA A100 80GB
 dense,NVIDIA A100 80GB,20.0,15.0,14.0,15.5
+dense-70b,NVIDIA A100 80GB,5.0,3.8,140.0,155.0
+# Dense models - NVIDIA H100 80GB
 dense,NVIDIA H100 80GB,60.0,48.0,14.0,15.2
+dense-70b,NVIDIA H100 80GB,15.0,12.0,140.0,152.0
+# Dense models - Huawei 910B
 dense,华为 Ascend 910B,18.0,12.6,14.0,15.8
+dense-70b,华为 Ascend 910B,4.5,3.2,140.0,160.0
+# Dense models - Other NVIDIA
 dense,NVIDIA A100 40GB,20.0,14.0,14.0,15.5
 dense,NVIDIA L40S,18.0,12.6,14.0,15.5
+dense,NVIDIA RTX 4090,16.0,11.2,14.0,15.5
+# Dense models - LLaMA-3 (GQA)
+dense-llama3,NVIDIA A100 80GB,22.0,17.0,16.0,17.5
+dense-llama3,NVIDIA H100 80GB,65.0,52.0,16.0,17.2
+# MoE models
 moe,NVIDIA A100 80GB,15.0,9.75,80.0,92.0
 moe,NVIDIA H100 80GB,45.0,33.75,80.0,88.0
 moe,华为 Ascend 910B,12.0,8.4,80.0,94.0
+moe-DeepSeekV3,NVIDIA H100 80GB,8.0,5.6,500.0,560.0
+# o1 reasoning models
+o1_reasoning,NVIDIA A100 80GB,10.0,7.0,20.0,23.0
+o1_reasoning,NVIDIA H100 80GB,30.0,22.0,20.0,22.5
+# Multimodal models
+multimodal,NVIDIA A100 80GB,18.0,13.0,16.0,18.0
+multimodal,NVIDIA H100 80GB,50.0,38.0,16.0,17.5
+# Recommendation models
+recommendation,NVIDIA A100 80GB,500.0,380.0,0.7,0.8
+recommendation,NVIDIA H100 80GB,800.0,620.0,0.7,0.8
+# New hardware
+dense,华为 Ascend 910C,25.0,18.0,14.0,15.5
+dense,华为 Ascend 310P,10.0,7.0,14.0,16.0
+dense,海光 DCU,14.0,10.0,14.0,16.0
+dense,沐曦 N100,12.0,8.5,14.0,16.0

@@ -66,3 +66,10 @@ def test_default_calibration_auto_loaded():
     assert factor.num_points > 0
     assert abs(factor.throughput_factor - 0.75) < 0.01  # 15/20 = 0.75
     assert abs(factor.memory_factor - 1.107) < 0.01     # 15.5/14 = 1.107
+
+
+def test_default_calibration_count():
+    mgr = CalibrationManager()
+    entries = mgr.list_entries()
+    # Should have 25+ entries from the expanded default data
+    assert len(entries) >= 25
