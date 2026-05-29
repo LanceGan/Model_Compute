@@ -64,7 +64,7 @@ def test_default_calibration_auto_loaded():
     mgr = CalibrationManager()
     factor = mgr.get_factor("dense", "NVIDIA A100 80GB")
     assert factor.num_points > 0
-    assert abs(factor.throughput_factor - 0.75) < 0.01  # 15/20 = 0.75
+    assert abs(factor.throughput_factor - 0.682) < 0.01  # 15/22 = 0.6818
     assert abs(factor.memory_factor - 1.107) < 0.01     # 15.5/14 = 1.107
 
 
