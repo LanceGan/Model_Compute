@@ -116,3 +116,27 @@ def test_recommendation_presets_listed():
     presets = analyzer.list_presets()
     assert "recommendation" in presets
     assert len(presets["recommendation"]) >= 4
+
+
+def test_llama3_preset_has_gqa():
+    analyzer = ModelAnalyzer()
+    preset = analyzer.get_preset("dense", "LLaMA-3 8B")
+    assert preset is not None
+    assert preset["num_kv_heads"] == 8
+    assert preset["head_dim"] == 128
+    assert preset["use_swiglu"] is True
+
+
+def test_qwen25_preset():
+    analyzer = ModelAnalyzer()
+    preset = analyzer.get_preset("dense", "Qwen-2.5 7B")
+    assert preset is not None
+    assert preset["num_kv_heads"] == 4
+
+
+def test_deepseek_v3_preset():
+    analyzer = ModelAnalyzer()
+    preset = analyzer.get_preset("moe", "DeepSeek-V3")
+    assert preset is not None
+    assert preset["num_experts"] == 256
+    assert preset["active_experts"] == 8

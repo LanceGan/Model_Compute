@@ -79,6 +79,9 @@ class ModelAnalyzer:
         vocab_size_per_feature: int = 0,
         embed_dim: int = 0,
         mlp_dims: Optional[list] = None,
+        num_kv_heads: int = 0,
+        head_dim: int = 0,
+        use_swiglu: bool = False,
     ):
         if mlp_dims is None:
             mlp_dims = []
@@ -108,6 +111,9 @@ class ModelAnalyzer:
             params.vocab_size_per_feature = preset.get("vocab_size_per_feature", 0)
             params.embed_dim = preset.get("embed_dim", 0)
             params.mlp_dims = preset.get("mlp_dims", [])
+            params.num_kv_heads = preset.get("num_kv_heads", 0)
+            params.head_dim = preset.get("head_dim", 0)
+            params.use_swiglu = preset.get("use_swiglu", False)
         elif param_billions is not None:
             params.param_billions = param_billions
             params.num_experts = num_experts
@@ -118,6 +124,9 @@ class ModelAnalyzer:
             params.vocab_size_per_feature = vocab_size_per_feature
             params.embed_dim = embed_dim
             params.mlp_dims = mlp_dims
+            params.num_kv_heads = num_kv_heads
+            params.head_dim = head_dim
+            params.use_swiglu = use_swiglu
 
         # Override if explicitly provided (including 0, which disables the feature)
         if reasoning_depth is not None:
