@@ -10,16 +10,16 @@ struct HardwareSpec {
     std::string vendor;
     std::string architecture;
     std::string type;
-    double fp16_tflops;
-    double int8_tops;
-    double fp32_tflops;
-    double memory_gb;
+    double fp16_tflops = 0;
+    double int8_tops = 0;
+    double fp32_tflops = 0;
+    double memory_gb = 0;
     std::string memory_type;
-    double memory_bandwidth_gbs;
-    double nvlink_bandwidth_gbs;
+    double memory_bandwidth_gbs = 0;
+    double nvlink_bandwidth_gbs = 0;
     std::string pcie_version;
-    double max_tdp_watts;
-    double cost_per_unit;
+    double max_tdp_watts = 0;
+    double cost_per_unit = 0;
 };
 
 struct HardwareConfig {

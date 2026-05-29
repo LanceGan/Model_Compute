@@ -1,4 +1,5 @@
 #include "hardware_matcher.h"
+#include "architecture_utils.h"
 #include <cmath>
 #include <algorithm>
 
@@ -23,11 +24,8 @@ double HardwareMatcher::estimate_comm_overhead(int cards, const HardwareSpec& hw
     if (cards <= 1) return 0.0;
 
     // Estimate hidden_dim from model params (approximate)
-    double p = mp.param_billions * 1e9;
-    double L = std::pow(p / (12.0 * 128.0 * 128.0), 1.0 / 3.0);
-    int num_layers = std::max(2, static_cast<int>(std::round(L)));
-    int hidden_dim = std::max(512, static_cast<int>(std::round(128.0 * num_layers)));
-    hidden_dim = (hidden_dim + 63) / 64 * 64;
+    int num_layers, hidden_dim, num_heads;
+    infer_architecture(mp.param_billions, num_layers, hidden_dim, num_heads);
 
     double bpp = 2.0;  // Default FP16
     if (mp.quant == Quantization::INT8) bpp = 1.0;
