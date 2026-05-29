@@ -43,7 +43,10 @@ PYBIND11_MODULE(model_compute, m) {
         .def_readwrite("num_sparse_features", &ModelParams::num_sparse_features)
         .def_readwrite("vocab_size_per_feature", &ModelParams::vocab_size_per_feature)
         .def_readwrite("embed_dim", &ModelParams::embed_dim)
-        .def_readwrite("mlp_dims", &ModelParams::mlp_dims);
+        .def_readwrite("mlp_dims", &ModelParams::mlp_dims)
+        .def_readwrite("num_kv_heads", &ModelParams::num_kv_heads)
+        .def_readwrite("head_dim", &ModelParams::head_dim)
+        .def_readwrite("use_swiglu", &ModelParams::use_swiglu);
 
     // ── EstimationResult ───────────────────────────────────────────────
 
@@ -52,7 +55,9 @@ PYBIND11_MODULE(model_compute, m) {
         .def_readwrite("flops_total", &EstimationResult::flops_total)
         .def_readwrite("bandwidth_gbs", &EstimationResult::bandwidth_gbs)
         .def_readwrite("kv_cache_gb", &EstimationResult::kv_cache_gb)
-        .def_readonly("weight_memory_gb", &EstimationResult::weight_memory_gb);
+        .def_readonly("weight_memory_gb", &EstimationResult::weight_memory_gb)
+        .def_readwrite("runtime_overhead_gb", &EstimationResult::runtime_overhead_gb)
+        .def_readwrite("fragmentation_gb", &EstimationResult::fragmentation_gb);
 
     // ── EstimationEngine ───────────────────────────────────────────────
 
