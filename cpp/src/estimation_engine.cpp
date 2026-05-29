@@ -61,7 +61,10 @@ double EstimationEngine::estimate_dense(const ModelParams& p, EstimationResult& 
     double base_memory_gb = total_bytes / 1e9;
 
     // Framework overhead
-    r.runtime_overhead_gb = 0.8;  // CUDA/PyTorch runtime
+    // Runtime overhead: scales with model complexity (CUDA/PyTorch context, kernels, etc.)
+    // Small models: ~0.2 GB, large models: up to 1.5 GB
+    r.runtime_overhead_gb = 0.2 + 0.02 * base_memory_gb;
+    r.runtime_overhead_gb = std::min(r.runtime_overhead_gb, 1.5);
 
     // Fragmentation: larger models have lower fragmentation ratio
     double frag_ratio = (base_memory_gb > 50.0) ? 0.05 : 0.10;
@@ -109,8 +112,9 @@ double EstimationEngine::estimate_moe(const ModelParams& p, EstimationResult& r)
     double total_bytes = total_params_bytes + kv_bytes + activation_bytes;
     double base_memory_gb = total_bytes / 1e9;
 
-    // Framework overhead
-    r.runtime_overhead_gb = 0.8;  // CUDA/PyTorch runtime
+    // Framework overhead: scales with model complexity
+    r.runtime_overhead_gb = 0.2 + 0.02 * base_memory_gb;
+    r.runtime_overhead_gb = std::min(r.runtime_overhead_gb, 1.5);
 
     // Fragmentation: larger models have lower fragmentation ratio
     double frag_ratio = (base_memory_gb > 50.0) ? 0.05 : 0.10;
@@ -214,8 +218,9 @@ double EstimationEngine::estimate_recommendation(const ModelParams& p, Estimatio
         double total_bytes = embedding_bytes + mlp_bytes;
         double base_memory_gb = total_bytes / 1e9;
 
-        // Framework overhead
-        r.runtime_overhead_gb = 0.8;  // CUDA/PyTorch runtime
+        // Framework overhead: scales with model complexity
+        r.runtime_overhead_gb = 0.2 + 0.02 * base_memory_gb;
+        r.runtime_overhead_gb = std::min(r.runtime_overhead_gb, 1.5);
 
         // Fragmentation: larger models have lower fragmentation ratio
         double frag_ratio = (base_memory_gb > 50.0) ? 0.05 : 0.10;
