@@ -108,7 +108,7 @@ class CalibrationManager:
 
     def import_csv(self, path: str) -> int:
         count = 0
-        with open(path, "r") as f:
+        with open(path, "r", encoding="utf-8") as f:
             for line in f:
                 line = line.strip()
                 if not line or line.startswith("#"):
