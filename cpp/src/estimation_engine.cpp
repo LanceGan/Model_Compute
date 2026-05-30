@@ -61,13 +61,12 @@ double EstimationEngine::estimate_dense(const ModelParams& p, EstimationResult& 
     double base_memory_gb = total_bytes / 1e9;
 
     // Framework overhead
-    // Runtime overhead: scales with model complexity (CUDA/PyTorch context, kernels, etc.)
-    // Small models: ~0.2 GB, large models: up to 1.5 GB
-    r.runtime_overhead_gb = 0.2 + 0.02 * base_memory_gb;
+    // Runtime overhead: scales with model complexity (CUDA/PyTorch context, kernels)
+    r.runtime_overhead_gb = 0.15 + 0.01 * base_memory_gb;
     r.runtime_overhead_gb = std::min(r.runtime_overhead_gb, 1.5);
 
     // Fragmentation: larger models have lower fragmentation ratio
-    double frag_ratio = (base_memory_gb > 50.0) ? 0.05 : 0.10;
+    double frag_ratio = (base_memory_gb > 50.0) ? 0.03 : 0.05;
     r.fragmentation_gb = base_memory_gb * frag_ratio;
 
     r.memory_gb = base_memory_gb + r.fragmentation_gb + r.runtime_overhead_gb;
@@ -113,11 +112,11 @@ double EstimationEngine::estimate_moe(const ModelParams& p, EstimationResult& r)
     double base_memory_gb = total_bytes / 1e9;
 
     // Framework overhead: scales with model complexity
-    r.runtime_overhead_gb = 0.2 + 0.02 * base_memory_gb;
+    r.runtime_overhead_gb = 0.15 + 0.01 * base_memory_gb;
     r.runtime_overhead_gb = std::min(r.runtime_overhead_gb, 1.5);
 
     // Fragmentation: larger models have lower fragmentation ratio
-    double frag_ratio = (base_memory_gb > 50.0) ? 0.05 : 0.10;
+    double frag_ratio = (base_memory_gb > 50.0) ? 0.03 : 0.05;
     r.fragmentation_gb = base_memory_gb * frag_ratio;
 
     r.memory_gb = base_memory_gb + r.fragmentation_gb + r.runtime_overhead_gb;
@@ -219,11 +218,11 @@ double EstimationEngine::estimate_recommendation(const ModelParams& p, Estimatio
         double base_memory_gb = total_bytes / 1e9;
 
         // Framework overhead: scales with model complexity
-        r.runtime_overhead_gb = 0.2 + 0.02 * base_memory_gb;
+        r.runtime_overhead_gb = 0.15 + 0.01 * base_memory_gb;
         r.runtime_overhead_gb = std::min(r.runtime_overhead_gb, 1.5);
 
         // Fragmentation: larger models have lower fragmentation ratio
-        double frag_ratio = (base_memory_gb > 50.0) ? 0.05 : 0.10;
+        double frag_ratio = (base_memory_gb > 50.0) ? 0.03 : 0.05;
         r.fragmentation_gb = base_memory_gb * frag_ratio;
 
         r.memory_gb = base_memory_gb + r.fragmentation_gb + r.runtime_overhead_gb;

@@ -505,7 +505,7 @@ TEST(FrameworkOverhead, RuntimeOverheadAdded) {
     params.max_tokens = 2048;
 
     auto result = engine.estimate(params);
-    EXPECT_GT(result.runtime_overhead_gb, 0.5);
+    EXPECT_GT(result.runtime_overhead_gb, 0.1);
     EXPECT_LT(result.runtime_overhead_gb, 1.5);
 }
 
