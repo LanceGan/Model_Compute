@@ -6,10 +6,12 @@
 namespace model_compute {
 
 int HardwareMatcher::calculate_cards_by_memory(double memory_needed, double card_memory) {
+    if (card_memory <= 0) return 1;  // Guard against division by zero
     return static_cast<int>(std::ceil(memory_needed / card_memory));
 }
 
 int HardwareMatcher::calculate_cards_by_compute(double flops_needed, double card_tflops) {
+    if (card_tflops <= 0) return 1;  // Guard against division by zero
     double card_flops = card_tflops * 1e12;
     return static_cast<int>(std::ceil(flops_needed / card_flops));
 }
@@ -47,6 +49,7 @@ double HardwareMatcher::estimate_comm_overhead(int cards, const HardwareSpec& hw
 
     // Communication time vs compute time ratio
     double comm_time = total_comm_bytes / (bandwidth_gbs * 1e9);
+    if (hw.fp16_tflops <= 0) return 0.0;
     double compute_time = 2.0 * mp.param_billions * 1e9 / (hw.fp16_tflops * 1e12);
     if (compute_time <= 0) return 0.0;
     double overhead = comm_time / (comm_time + compute_time);
@@ -72,6 +75,15 @@ std::vector<HardwareConfig> HardwareMatcher::match(
         config.parallel_strategy = select_parallel_strategy(config.num_cards, model_params.type);
 
         double comm_overhead = estimate_comm_overhead(config.num_cards, hw, model_params);
+
+        if (hw.memory_bandwidth_gbs <= 0 && hw.fp16_tflops <= 0) {
+            config.estimated_throughput = 0;
+            config.estimated_latency_ms = 0;
+            config.bottleneck_type = "unknown";
+            config.meets_baseline = false;
+            results.push_back(config);
+            continue;
+        }
 
         double effective_bandwidth = hw.memory_bandwidth_gbs * config.num_cards * (1.0 - comm_overhead);
         double bytes_per_token = 0;

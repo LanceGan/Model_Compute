@@ -42,7 +42,7 @@ EstimationResult EstimationEngine::estimate(const ModelParams& params) {
 //   kv_dim = num_kv_heads x head_dim (GQA-aware)
 // Activation: concurrency x seq_len x hidden_dim x bpp x 2.0 (per-layer, inference)
 // Framework overhead: 0.15 + 0.01 x base_memory (capped at 1.5 GB)
-// Fragmentation: 5% (< 50 GB) or 3% (> 50 GB)
+// Fragmentation: 2% (<= 20 GB) or 3% (> 20 GB)
 double EstimationEngine::estimate_dense(const ModelParams& p, EstimationResult& r) {
     double bpp = bytes_per_param(p.quant);
     double params_bytes = p.param_billions * 1e9 * bpp;
@@ -144,7 +144,7 @@ double EstimationEngine::estimate_moe(const ModelParams& p, EstimationResult& r)
     double routing_overhead = base_flops * 0.01;
     r.flops_total = (base_flops + routing_overhead) * p.concurrency;
 
-    double bytes_per_token = active_params_b * 1e9 * bpp + 2.0 * num_layers * kv_dim * bpp;
+    double bytes_per_token = active_params_b * 1e9 * bpp + 2.0 * num_layers * kv_dim * 2.0;  // KV always FP16
     r.bandwidth_gbs = bytes_per_token * 10.0 / 1e9;
 
     return r.memory_gb;

@@ -149,8 +149,8 @@ PYBIND11_MODULE(model_compute, m) {
              "Adjust a predicted memory value using calibration")
         .def("load_from_file", &Calibration::load_from_file,
              py::arg("path"),
-             "Load calibration data from a JSON file")
+             "Load calibration data from a CSV file")
         .def("save_to_file", &Calibration::save_to_file,
              py::arg("path"),
-             "Save calibration data to a JSON file");
+             "Save calibration data to a CSV file");
 }
