@@ -98,7 +98,8 @@ double EstimationEngine::estimate_moe(const ModelParams& p, EstimationResult& r)
     double active_params_b = shared_params_b + expert_params_b * active_ratio;
 
     int num_layers, hidden_dim, num_heads;
-    infer_architecture(p.param_billions, num_layers, hidden_dim, num_heads);
+    // Use MoE-aware inference: architecture depends on per-expert size, not total params
+    infer_moe_architecture(p.param_billions, num_experts, num_layers, hidden_dim, num_heads);
 
     int effective_kv_heads = (p.num_kv_heads > 0) ? p.num_kv_heads : num_heads;
     int effective_head_dim = (p.head_dim > 0) ? p.head_dim : (hidden_dim / num_heads);
@@ -107,7 +108,10 @@ double EstimationEngine::estimate_moe(const ModelParams& p, EstimationResult& r)
     double kv_bytes = 2.0 * num_layers * kv_dim * p.max_tokens * p.concurrency * kv_bpe;
     r.kv_cache_gb = kv_bytes / 1e9;
 
-    double activation_bytes = static_cast<double>(p.concurrency) * p.max_tokens * hidden_dim * bpp * 2.0;
+    // MoE activation: attention intermediates + expert FFN intermediates for active experts
+    double attention_act = static_cast<double>(p.concurrency) * p.max_tokens * hidden_dim * bpp * 2.0;
+    double expert_act = attention_act * active_ratio;  // Only active experts store intermediates
+    double activation_bytes = attention_act + expert_act;
     double total_bytes = total_params_bytes + kv_bytes + activation_bytes;
     double base_memory_gb = total_bytes / 1e9;
 
@@ -127,7 +131,7 @@ double EstimationEngine::estimate_moe(const ModelParams& p, EstimationResult& r)
     double routing_overhead = base_flops * 0.01;
     r.flops_total = (base_flops + routing_overhead) * p.concurrency;
 
-    double bytes_per_token = active_params_b * 1e9 * bpp + 2.0 * num_layers * hidden_dim * bpp;
+    double bytes_per_token = active_params_b * 1e9 * bpp + 2.0 * num_layers * kv_dim * bpp;
     r.bandwidth_gbs = bytes_per_token * 10.0 / 1e9;
 
     return r.memory_gb;
