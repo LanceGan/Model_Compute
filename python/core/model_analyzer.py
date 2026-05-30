@@ -43,6 +43,13 @@ _TYPE_MAP = {
 
 
 class ModelAnalyzer:
+    """Model parameter analyzer and preset manager.
+
+    Loads model presets from JSON and creates ModelParams objects
+    for the C++ estimation engine. Supports 5 model types:
+    dense, moe, o1_reasoning, multimodal, recommendation.
+    """
+
     def __init__(self, presets_path: Optional[str] = None):
         self._path = Path(presets_path) if presets_path else _PRESETS_PATH
         self._presets: dict = {}
@@ -83,6 +90,27 @@ class ModelAnalyzer:
         head_dim: int = 0,
         use_swiglu: bool = False,
     ):
+        """Create ModelParams from preset or custom parameters.
+
+        Args:
+            model_type: One of dense/moe/o1_reasoning/multimodal/recommendation
+            preset_name: Name of preset from model_presets.json (optional)
+            param_billions: Custom parameter count in billions (if no preset)
+            quant: Quantization scheme (FP16/INT8/INT4)
+            concurrency: Number of concurrent requests
+            max_tokens: Maximum sequence length
+            num_kv_heads: KV attention heads (0 = auto-infer, for GQA)
+            head_dim: Per-head dimension (0 = auto-infer)
+            use_swiglu: Whether model uses SwiGLU FFN
+            ... (other model-specific params)
+
+        Returns:
+            ModelParams object ready for engine.estimate()
+
+        Raises:
+            ValueError: If model_type or quant is not recognized
+            RuntimeError: If C++ module is not built
+        """
         if mlp_dims is None:
             mlp_dims = []
         if _mc is None:

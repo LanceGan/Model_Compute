@@ -27,6 +27,16 @@ _DEFAULT_CAL_DIR = Path(__file__).parent.parent / "data" / "calibration_data"
 
 
 class CalibrationManager:
+    """Calibration data manager for prediction accuracy improvement.
+
+    Manages calibration coefficients that correct theoretical predictions
+    using real hardware measurements. Auto-loads default calibration data
+    on initialization.
+
+    Calibration factor = actual_value / predicted_value
+    Adjusted prediction = raw_prediction x calibration_factor
+    """
+
     def __init__(self, cal_dir: Optional[str] = None):
         self._dir = Path(cal_dir) if cal_dir else _DEFAULT_CAL_DIR
         self._dir.mkdir(parents=True, exist_ok=True)

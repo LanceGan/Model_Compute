@@ -36,6 +36,13 @@ EstimationResult EstimationEngine::estimate(const ModelParams& params) {
     return result;
 }
 
+// Dense model estimation
+// Weight memory: param_billions x 1e9 x bytes_per_param
+// KV Cache: 2 x num_layers x kv_dim x seq_len x concurrency x 2.0 (FP16)
+//   kv_dim = num_kv_heads x head_dim (GQA-aware)
+// Activation: concurrency x seq_len x hidden_dim x bpp x 2.0 (per-layer, inference)
+// Framework overhead: 0.15 + 0.01 x base_memory (capped at 1.5 GB)
+// Fragmentation: 5% (< 50 GB) or 3% (> 50 GB)
 double EstimationEngine::estimate_dense(const ModelParams& p, EstimationResult& r) {
     double bpp = bytes_per_param(p.quant);
     double params_bytes = p.param_billions * 1e9 * bpp;
@@ -83,6 +90,12 @@ double EstimationEngine::estimate_dense(const ModelParams& p, EstimationResult& 
     return r.memory_gb;
 }
 
+// MoE model estimation
+// Architecture: inferred from per-expert size (not total params)
+// Weight memory: total_params x bpp (all experts stored)
+// Active params: shared (30%) + expert_params x active_ratio
+// KV Cache: GQA-aware, same as Dense
+// Activation: attention intermediates + expert FFN intermediates (active experts only)
 double EstimationEngine::estimate_moe(const ModelParams& p, EstimationResult& r) {
     double bpp = bytes_per_param(p.quant);
     int num_experts = p.num_experts > 0 ? p.num_experts : 8;
@@ -137,6 +150,10 @@ double EstimationEngine::estimate_moe(const ModelParams& p, EstimationResult& r)
     return r.memory_gb;
 }
 
+// o1 reasoning model estimation
+// Extends Dense with reasoning token multiplier:
+//   depth 1: 2.5x, depth 2: 4.0x, depth 3: 7.5x
+// Effective max_tokens = original x (1 + multiplier)
 double EstimationEngine::estimate_o1(const ModelParams& p, EstimationResult& r) {
     ModelParams dense_params = p;
     dense_params.type = ModelType::DENSE;
@@ -154,6 +171,11 @@ double EstimationEngine::estimate_o1(const ModelParams& p, EstimationResult& r) 
     return r.memory_gb;
 }
 
+// Multimodal model estimation
+// = Dense backbone + Vision encoder (ViT) + image token KV Cache
+// ViT params: 304M (small) or 6B (large models)
+// Image tokens: (resolution / patch_size)^2
+// Image KV Cache: GQA-aware, same formula as text KV Cache
 double EstimationEngine::estimate_multimodal(const ModelParams& p, EstimationResult& r) {
     ModelParams dense_params = p;
     dense_params.type = ModelType::DENSE;
@@ -189,6 +211,11 @@ double EstimationEngine::estimate_multimodal(const ModelParams& p, EstimationRes
     return r.memory_gb;
 }
 
+// Recommendation model estimation
+// DLRM/DeepFM: Embedding-dominant
+//   Embedding memory = num_sparse_features x vocab_size x embed_dim x bpp
+//   MLP params = Sigma(dim[i] x dim[i+1] + bias) x num_sparse_features
+// Sequential rec: Dense backbone + item embedding
 double EstimationEngine::estimate_recommendation(const ModelParams& p, EstimationResult& r) {
     if (p.num_sparse_features <= 0 || p.vocab_size_per_feature <= 0 || p.embed_dim <= 0) {
         return r.memory_gb;  // Invalid config, return zero

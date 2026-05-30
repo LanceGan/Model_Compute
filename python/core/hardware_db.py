@@ -30,6 +30,13 @@ _DEFAULT_DATA_PATH = Path(__file__).parent.parent / "data" / "hardware_specs.jso
 
 
 class HardwareDB:
+    """Hardware specification database.
+
+    Manages hardware specs (GPU/NPU) loaded from JSON, supports
+    CRUD operations and conversion to C++ HardwareSpec objects
+    for the estimation engine.
+    """
+
     def __init__(self, data_path: Optional[str] = None):
         self._data_path = Path(data_path) if data_path else _DEFAULT_DATA_PATH
         self._hardware: list[dict] = []
