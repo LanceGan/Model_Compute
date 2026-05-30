@@ -11,13 +11,18 @@ if _build_path.exists():
 
 # On Windows, add MinGW DLL directories so the pyd can find its dependencies
 if sys.platform == "win32" and hasattr(os, "add_dll_directory"):
-    for candidate in [
-        Path("F:/msys64/ucrt64/bin"),
-        Path("C:/msys64/ucrt64/bin"),
-        Path.home() / "msys64" / "ucrt64" / "bin",
-    ]:
-        if candidate.exists():
-            os.add_dll_directory(str(candidate))
+    # Try MSYS2_PREFIX env var first, then search PATH and common locations
+    _dll_candidates = []
+    _msys_prefix = os.environ.get("MSYS2_PREFIX")
+    if _msys_prefix:
+        _dll_candidates.append(Path(_msys_prefix) / "bin")
+    _dll_candidates.append(Path.home() / "msys64" / "ucrt64" / "bin")
+    for _p in os.environ.get("PATH", "").split(os.pathsep):
+        if "msys64" in _p.lower() and "ucrt64" in _p.lower():
+            _dll_candidates.append(Path(_p))
+    for _candidate in _dll_candidates:
+        if _candidate.exists():
+            os.add_dll_directory(str(_candidate))
             break
 
 try:
