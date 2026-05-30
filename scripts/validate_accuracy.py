@@ -39,7 +39,7 @@ def main():
     presets = analyzer.list_presets()
 
     mem_errors = []
-    tp_errors = []
+    flops_entries = []
     for entry in entries:
         model_type = entry["model_type"]
         actual_mem = entry["actual_memory"]
@@ -65,9 +65,10 @@ def main():
             mem_error = abs(result.memory_gb - actual_mem) / actual_mem * 100
             mem_errors.append((model_type, result.memory_gb, actual_mem, mem_error))
 
-        if actual_tp > 0:
-            tp_error = abs(result.throughput_tok_s - actual_tp) / actual_tp * 100
-            tp_errors.append((model_type, result.throughput_tok_s, actual_tp, tp_error))
+        # Note: throughput depends on hardware and is estimated by hardware matcher
+        # We report FLOPs as compute requirement indicator
+        if result.flops_total > 0:
+            flops_entries.append((model_type, result.flops_total))
 
     if mem_errors:
         mape = sum(e[3] for e in mem_errors) / len(mem_errors)
@@ -79,16 +80,8 @@ def main():
         print("No matching presets found for memory calibration entries.")
 
     print()
-
-    if tp_errors:
-        mape = sum(e[3] for e in tp_errors) / len(tp_errors)
-        print(f"Throughput MAPE: {mape:.1f}% ({len(tp_errors)} samples)")
-        print()
-        for mt, pred, actual, err in tp_errors:
-            print(f"  {mt:20s} pred={pred:8.1f} tok/s  actual={actual:8.1f} tok/s  error={err:5.1f}%")
-    else:
-        print("No matching presets found for throughput calibration entries.")
-
+    print("Note: Throughput depends on hardware specs and is estimated by the")
+    print("hardware matcher, not the estimation engine directly.")
     print("-" * 60)
 
 
