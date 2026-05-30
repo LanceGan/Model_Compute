@@ -114,7 +114,8 @@ def render():
             col1, col2 = st.columns(2)
             with col1:
                 mt = st.selectbox("模型类型", ["dense", "moe", "o1_reasoning", "multimodal", "recommendation"], key="cal_mt")
-                hw_name = st.text_input("硬件名称", key="cal_hw")
+                hw_db_list = hw_db.list_hardware()
+                hw_name = st.selectbox("硬件名称", [h["name"] for h in hw_db_list], key="cal_hw") if hw_db_list else st.text_input("硬件名称", key="cal_hw")
             with col2:
                 pred_tp = st.number_input("预测吞吐", 0.0, value=20.0, key="cal_pred_tp")
                 act_tp = st.number_input("实际吞吐", 0.0, value=16.0, key="cal_act_tp")

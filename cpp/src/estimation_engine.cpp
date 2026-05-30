@@ -101,6 +101,9 @@ double EstimationEngine::estimate_moe(const ModelParams& p, EstimationResult& r)
     int num_experts = p.num_experts > 0 ? p.num_experts : 8;
     int active_experts = p.active_experts > 0 ? p.active_experts : 2;
 
+    // Ensure active_experts <= num_experts
+    if (active_experts > num_experts) active_experts = num_experts;
+
     double total_params_bytes = p.param_billions * 1e9 * bpp;
     r.weight_memory_gb = total_params_bytes / 1e9;
 
@@ -217,8 +220,17 @@ double EstimationEngine::estimate_multimodal(const ModelParams& p, EstimationRes
 //   MLP params = Sigma(dim[i] x dim[i+1] + bias) x num_sparse_features
 // Sequential rec: Dense backbone + item embedding
 double EstimationEngine::estimate_recommendation(const ModelParams& p, EstimationResult& r) {
-    if (p.num_sparse_features <= 0 || p.vocab_size_per_feature <= 0 || p.embed_dim <= 0) {
-        return r.memory_gb;  // Invalid config, return zero
+    if (p.num_sparse_features <= 0) {
+        // No recommendation-specific params; if param_billions > 0, treat as dense backbone
+        if (p.param_billions > 0) {
+            ModelParams dense_params = p;
+            dense_params.type = ModelType::DENSE;
+            estimate_dense(dense_params, r);
+        }
+        return r.memory_gb;
+    }
+    if (p.vocab_size_per_feature <= 0 || p.embed_dim <= 0) {
+        return r.memory_gb;  // Invalid embedding config
     }
 
     double bpp = bytes_per_param(p.quant);

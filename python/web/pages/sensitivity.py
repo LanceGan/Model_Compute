@@ -45,7 +45,11 @@ def render():
             param_billions = None
         quant = st.selectbox("量化方案", ["FP16", "INT8", "INT4"], key="sa_quant")
     with col2:
-        hardware_name = st.selectbox("目标硬件", [h["name"] for h in hw_db.list_hardware()], key="sa_hw")
+        hw_list = hw_db.list_hardware()
+        if not hw_list:
+            st.error("硬件数据库为空，请先在管理页面添加硬件。")
+            return
+        hardware_name = st.selectbox("目标硬件", [h["name"] for h in hw_list], key="sa_hw")
         max_tokens = st.slider("最大 tokens", 512, 32768, 2048, step=512, key="sa_tokens")
 
     # Conditional params
