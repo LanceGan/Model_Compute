@@ -73,7 +73,7 @@ double EstimationEngine::estimate_dense(const ModelParams& p, EstimationResult& 
     r.runtime_overhead_gb = std::min(r.runtime_overhead_gb, 1.5);
 
     // Fragmentation: larger models have lower fragmentation ratio
-    double frag_ratio = (base_memory_gb > 50.0) ? 0.03 : 0.05;
+    double frag_ratio = (base_memory_gb > 20.0) ? 0.03 : 0.02;
     r.fragmentation_gb = base_memory_gb * frag_ratio;
 
     r.memory_gb = base_memory_gb + r.fragmentation_gb + r.runtime_overhead_gb;
@@ -133,7 +133,7 @@ double EstimationEngine::estimate_moe(const ModelParams& p, EstimationResult& r)
     r.runtime_overhead_gb = std::min(r.runtime_overhead_gb, 1.5);
 
     // Fragmentation: larger models have lower fragmentation ratio
-    double frag_ratio = (base_memory_gb > 50.0) ? 0.03 : 0.05;
+    double frag_ratio = (base_memory_gb > 20.0) ? 0.03 : 0.02;
     r.fragmentation_gb = base_memory_gb * frag_ratio;
 
     r.memory_gb = base_memory_gb + r.fragmentation_gb + r.runtime_overhead_gb;
@@ -253,7 +253,7 @@ double EstimationEngine::estimate_recommendation(const ModelParams& p, Estimatio
         r.runtime_overhead_gb = std::min(r.runtime_overhead_gb, 1.5);
 
         // Fragmentation: larger models have lower fragmentation ratio
-        double frag_ratio = (base_memory_gb > 50.0) ? 0.03 : 0.05;
+        double frag_ratio = (base_memory_gb > 20.0) ? 0.03 : 0.02;
         r.fragmentation_gb = base_memory_gb * frag_ratio;
 
         r.memory_gb = base_memory_gb + r.fragmentation_gb + r.runtime_overhead_gb;
