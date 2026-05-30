@@ -120,21 +120,24 @@ class CalibrationManager:
                     continue
                 parts = line.split(",")
                 if len(parts) >= 6:
-                    self.add_point(
-                        model_type=parts[0].strip(),
-                        hardware_name=parts[1].strip(),
-                        predicted_throughput=float(parts[2]),
-                        actual_throughput=float(parts[3]),
-                        predicted_memory=float(parts[4]),
-                        actual_memory=float(parts[5]),
-                    )
-                    count += 1
+                    try:
+                        self.add_point(
+                            model_type=parts[0].strip(),
+                            hardware_name=parts[1].strip(),
+                            predicted_throughput=float(parts[2]),
+                            actual_throughput=float(parts[3]),
+                            predicted_memory=float(parts[4]),
+                            actual_memory=float(parts[5]),
+                        )
+                        count += 1
+                    except (ValueError, IndexError):
+                        continue  # Skip malformed lines
         return count
 
     def save(self, path: Optional[str] = None):
         save_path = Path(path) if path else self._dir / "calibration.csv"
         user_points = [p for p in self._points if not p.get("_is_default", False)]
-        with open(save_path, "w") as f:
+        with open(save_path, "w", encoding="utf-8") as f:
             f.write("# model_type,hardware_name,predicted_tp,actual_tp,predicted_mem,actual_mem\n")
             for p in user_points:
                 f.write(f"{p['model_type']},{p['hardware_name']},"
@@ -149,6 +152,8 @@ class CalibrationManager:
         default_csv = self._dir / "default_calibration.csv"
         if default_csv.exists():
             self.import_csv(str(default_csv))
+            for p in self._points:
+                p["_is_default"] = True
         # Then load user calibration
         load_path = Path(path) if path else self._dir / "calibration.csv"
         if load_path.exists():
